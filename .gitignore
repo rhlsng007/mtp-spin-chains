@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Environments
+venv/
+.venv/
+env/
+
+# Large raw results (keep folder structure, not data)
+results/**/*.npz
+results/**/*.json
+!results/.gitkeep
+
+# Figures are regenerated from scripts; keep only final PDFs if you want
+figures/**/*.png
+!figures/.gitkeep
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
