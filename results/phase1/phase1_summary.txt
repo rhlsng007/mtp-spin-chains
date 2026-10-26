@@ -1,0 +1,74 @@
+PHASE 1 SUMMARY: exact diagonalization
+============================================================
+TFIM half-chain entropy (even-parity ground state)
+  open     N= 6: max at h = 0.15 (S = 0.6932), steepest drop at h = 0.80, S(h_c) = 0.3280
+  open     N= 8: max at h = 0.35 (S = 0.6934), steepest drop at h = 0.85, S(h_c) = 0.3572
+  open     N=10: max at h = 0.45 (S = 0.6944), steepest drop at h = 0.90, S(h_c) = 0.3791
+  open     N=12: max at h = 0.55 (S = 0.6960), steepest drop at h = 0.90, S(h_c) = 0.3965
+  open     N=14: max at h = 0.60 (S = 0.6980), steepest drop at h = 0.95, S(h_c) = 0.4110
+  periodic N= 6: max at h = 0.55 (S = 0.6970), steepest drop at h = 1.10, S(h_c) = 0.5877
+  periodic N= 8: max at h = 0.75 (S = 0.7104), steepest drop at h = 1.15, S(h_c) = 0.6351
+  periodic N=10: max at h = 0.85 (S = 0.7271), steepest drop at h = 1.10, S(h_c) = 0.6720
+  periodic N=12: max at h = 0.90 (S = 0.7443), steepest drop at h = 1.10, S(h_c) = 0.7023
+  periodic N=14: max at h = 0.90 (S = 0.7623), steepest drop at h = 1.10, S(h_c) = 0.7279
+
+TFIM gap at h_c (boundary CFT: N*gap -> pi * v * x, v = 2J)
+  N= 4: N*(E1-E0) = 2.7784   N*gap_even = 10.7784
+  N= 6: N*(E1-E0) = 2.8929   N*gap_even = 11.4034
+  N= 8: N*(E1-E0) = 2.9526   N*gap_even = 11.7098
+  N=10: N*(E1-E0) = 2.9892   N*gap_even = 11.8900
+  N=12: N*(E1-E0) = 3.0139   N*gap_even = 12.0082
+  N=14: N*(E1-E0) = 3.0318   N*gap_even = 12.0916
+  1/N extrapolation: full 3.1382 (pi = 3.1416, error 0.11%), even 12.5958 (4 pi = 12.5664, error 0.23%)
+
+TFIM Binder-cumulant crossings (linear interpolation)
+  N= 6 / N= 8: h* = 0.9208
+  N= 8 / N=10: h* = 0.9516
+  N=10 / N=12: h* = 0.9672
+  N=12 / N=14: h* = 0.9762
+
+TFIM central charge at h_c (Calabrese-Cardy, ell_min = 2)
+  open     N= 6: c = 0.5769 +/- nan
+  open     N= 8: c = 0.5724 +/- 0.0018
+  open     N=10: c = 0.5681 +/- 0.0026
+  open     N=12: c = 0.5644 +/- 0.0028
+  open     N=14: c = 0.5611 +/- 0.0030
+  periodic N= 6: c = 0.5050 +/- nan
+  periodic N= 8: c = 0.5036 +/- 0.0003
+  periodic N=10: c = 0.5029 +/- 0.0003
+  periodic N=12: c = 0.5024 +/- 0.0003
+  periodic N=14: c = 0.5020 +/- 0.0003
+  (eta = 2 for open, 1 for periodic chains; exact value c = 1/2)
+
+XXZ ground-state symmetry sector (expected (-1)^(N/2), Marshall sign rule)
+  N= 4: spin-flip parity [1], expected 1
+  N= 6: spin-flip parity [-1], expected -1
+  N= 8: spin-flip parity [1], expected 1
+  N=10: spin-flip parity [-1], expected -1
+  N=12: spin-flip parity [1], expected 1
+  N=14: spin-flip parity [-1], expected -1
+
+XXZ central charge (exact value c = 1)
+  Delta=0 periodic             N= 6: c = 1.0778 +/- nan
+  Delta=0 periodic             N= 8: c = 1.0525 +/- 0.0055
+  Delta=0 periodic             N=10: c = 1.0403 +/- 0.0057
+  Delta=0 periodic             N=12: c = 1.0328 +/- 0.0052
+  Delta=0 periodic             N=14: c = 1.0277 +/- 0.0046
+  Delta=0.5 periodic           N= 6: c = 1.0867 +/- nan
+  Delta=0.5 periodic           N= 8: c = 1.0594 +/- 0.0058
+  Delta=0.5 periodic           N=10: c = 1.0461 +/- 0.0061
+  Delta=0.5 periodic           N=12: c = 1.0378 +/- 0.0056
+  Delta=0.5 periodic           N=14: c = 1.0321 +/- 0.0050
+  Delta=0 open, even ell       N= 8: c = 1.1752 +/- nan
+  Delta=0 open, even ell       N=10: c = 1.1808 +/- nan
+  Delta=0 open, even ell       N=12: c = 1.1800 +/- 0.0053
+  Delta=0 open, even ell       N=14: c = 1.1793 +/- 0.0081
+  Delta=0 open, odd ell        N=10: c = 0.4683 +/- nan
+  Delta=0 open, odd ell        N=12: c = 0.5061 +/- nan
+  Delta=0 open, odd ell        N=14: c = 0.5398 +/- 0.0120
+
+Cluster-Ising string order
+  h2 = -1.0, N=14: S(0.0) = 0.092, S(0.4) = 0.107, S(0.8) = 0.335, S(1.2) = 0.399, S(1.6) = 0.408
+  h2 = +0.0, N=14: S(0.0) = 1.000, S(0.4) = 0.837, S(0.8) = 0.323, S(1.2) = 0.055, S(1.6) = 0.011
+  h2 = +1.0, N=14: S(0.0) = 0.092, S(0.4) = 0.003, S(0.8) = 0.001, S(1.2) = 0.000, S(1.6) = 0.000
+

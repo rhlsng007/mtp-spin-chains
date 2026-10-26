@@ -77,6 +77,7 @@ class ClusterIsingConfig:
     h1_max: float = 1.6
     h2_values: tuple = (-1.0, 0.0, 1.0)
     h1_step: float = 0.1
+    boundary: str = "open"
 
     def h1_grid(self) -> np.ndarray:
         return make_grid(self.h1_min, self.h1_max, self.h1_step)
@@ -96,6 +97,22 @@ class SystemConfig:
         """Circuit depths p to scan: 1..N noiseless, 1..N/2 noisy."""
         p_max = n_qubits // 2 if noisy else n_qubits
         return list(range(1, max(p_max, 1) + 1))
+
+
+# ---------------------------------------------------------------------------
+# Exact diagonalization (Phase 1)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class EDConfig:
+    k_per_sector: int = 3               # lowest eigenpairs kept in each symmetry sector
+    dense_max_dim: int = 512            # sectors up to this dimension use dense eigh
+    eigsh_tol: float = 0.0              # 0 = machine precision in scipy's eigsh
+    degeneracy_tol: float = 1e-9        # levels closer than this count as degenerate
+    eigsh_seed: int = 0                 # fixed Lanczos start vector -> reproducible
+    save_states: bool = True            # store lowest state of every sector (Phases 2, 6)
+    cc_ell_min: int = 2                 # Calabrese-Cardy fit uses ell_min <= ell <= N/2
+    cc_boundaries: tuple = ("open", "periodic")
+    xxz_cc_deltas: tuple = (0.0, 0.5)   # gapless XXZ points used for c = 1 checks
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +188,7 @@ class Config:
     xxz: XXZConfig = field(default_factory=XXZConfig)
     cluster: ClusterIsingConfig = field(default_factory=ClusterIsingConfig)
     system: SystemConfig = field(default_factory=SystemConfig)
+    ed: EDConfig = field(default_factory=EDConfig)
     vqe: VQEConfig = field(default_factory=VQEConfig)
     noise: NoiseConfig = field(default_factory=NoiseConfig)
     ml: MLConfig = field(default_factory=MLConfig)
@@ -188,7 +206,9 @@ if __name__ == "__main__":
     print("TFIM h grid (noiseless):", CFG.tfim.h_grid())
     print("TFIM h grid (noisy):    ", CFG.tfim.h_grid(noisy=True))
     print("XXZ delta grid:         ", CFG.xxz.delta_grid())
+    print("Cluster h1 grid:        ", CFG.cluster.h1_grid())
     print("Noise strengths:        ", CFG.noise.strengths())
     print("Depths for N=8:         ", CFG.system.depths(8))
     print("Depths for N=8 (noisy): ", CFG.system.depths(8, noisy=True))
     print("Seeds:                  ", CFG.seeds.seeds())
+    print("ED settings:            ", CFG.ed)
