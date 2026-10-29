@@ -116,17 +116,51 @@ class EDConfig:
 
 
 # ---------------------------------------------------------------------------
-# VQE optimisation
+# VQE optimisation (Phase 2; SPSA settings are used in Phase 4)
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
 class VQEConfig:
-    optimizer_noiseless: str = "L-BFGS-B"
+    # Optimizer (T2.3)
+    optimizer_noiseless: str = "L-BFGS-B"   # "L-BFGS-B" or "Adam"
     optimizer_noisy: str = "SPSA"
     max_iterations: int = 1000
-    tolerance: float = 1e-8
-    n_random_inits: int = 8             # random restarts per point
-    use_warm_start: bool = True         # reuse parameters from previous field value
+    tolerance: float = 1e-8             # stop when max |dE/dtheta| < tolerance
+    lbfgs_ftol: float = 1e-15           # relative energy-decrease stop (tiny: gtol decides)
+    lbfgs_maxcor: int = 20              # L-BFGS memory (stored correction pairs)
+    adam_lr: float = 0.02
+    adam_beta1: float = 0.9
+    adam_beta2: float = 0.999
+
+    # Initializations (T2.4)
+    n_random_inits: int = 8             # random restarts per point (first point, anchors, scans)
+    n_random_inits_sweep: int = 2       # random restarts at the other warm-started points
     init_scale: float = 0.1             # std of random initial parameters
+    init_distribution: str = "normal"   # "normal" (small, around the reference state) or "uniform"
+    tie_tolerance: float = 1e-10        # energies this close count as equal (earlier init wins)
+    anchor_fields: tuple = (0.5, 1.0, 1.5)  # fields that always get n_random_inits restarts
+
+    # Warm start (T2.5)
+    use_warm_start: bool = True         # reuse parameters from previous field value
+    hva_sweep_direction: str = "descending"  # HVA starts at |+>: begin deep in the paramagnet
+    hea_sweep_direction: str = "ascending"   # HEA starts at |0...0>: begin deep in the ferromagnet
+    hva_depth_warm_start: bool = True   # also start from the depth p-1 optimum + identity layer
+    warmcold_size: int = 8              # warm-versus-cold comparison at N = 8, p = N/2
+
+    # Sweeps and analysis (T2.6)
+    ansatze: tuple = ("hva", "hea")
+    ground_space_gap_ratio: float = 0.1  # sector in ground space if E_s - E0 < ratio * gap
+    target_rel_error: float = 1e-3      # threshold defining the required depth p*(h)
+    hva_depth_scan_sizes: tuple = (4, 6, 8, 10)
+    hva_depth_scan_factor: int = 2      # HVA depth scan at anchor fields up to p = factor * N
+    save_states: bool = True            # store optimized states (Phase 3 entanglement)
+
+    # Barren plateaus (T2.7)
+    grad_var_sizes: tuple = (4, 6, 8, 10, 12, 14)
+    grad_var_samples: int = 500         # random parameter draws per (ansatz, N, depth)
+    grad_var_fixed_depth: int = 2       # shallow comparison depth (besides p = N)
+    grad_var_field: float = 1.0         # TFIM cost function evaluated at h = h_c
+
+    # SPSA (Phase 4)
     spsa_iterations: int = 500
     spsa_a: float = 0.2                 # SPSA learning-rate scale
     spsa_c: float = 0.1                 # SPSA perturbation scale
@@ -212,3 +246,4 @@ if __name__ == "__main__":
     print("Depths for N=8 (noisy): ", CFG.system.depths(8, noisy=True))
     print("Seeds:                  ", CFG.seeds.seeds())
     print("ED settings:            ", CFG.ed)
+    print("VQE settings:           ", CFG.vqe)
