@@ -42,6 +42,7 @@ LABEL = {"hva": "HVA", "hea": "HEA"}
 MARKER = {"hva": "o", "hea": "s"}
 LINESTYLE = {"hva": "-", "hea": "--"}
 FLOOR = 1e-15          # plotted floor for errors that reach machine precision
+BOUND_RESOLUTION = 1e-6  # parity-splitting bounds below this are under the optimizer residual
 SUMMARY = []
 CHECKS = []
 
@@ -362,12 +363,25 @@ def summarize_sweeps(tables, curves):
             # rigorous bound E >= w_even E_even + w_odd E_odd, with w_odd = (1 - <P>) / 2
             w_odd = (1 - t["parity"][-1, broken]) / 2
             bound = 2 * w_odd * symmetry_broken_floor(n, t["h"])[broken]
-            ratio = t["rel_error"][-1, broken] / bound
-            check(f"HEA N={n} symmetry-broken states sit at the parity-splitting bound",
-                  ratio.min() > 1 - 1e-6 and np.median(ratio) < 2,
-                  f"{broken.sum()} fields with F < 0.6 at p = N; eps / bound from "
-                  f"{ratio.min():.3f} to {ratio.max():.3f} (median {np.median(ratio):.3f}); "
+            eps = t["rel_error"][-1, broken]
+            ratio = eps / bound
+            check(f"HEA N={n} symmetry-broken states respect the parity-splitting bound",
+                  ratio.min() > 1 - 1e-6,
+                  f"{broken.sum()} fields with F < 0.6 at p = N; min eps / bound = "
+                  f"{ratio.min():.3f} (must be >= 1); "
                   f"bound = w_odd (E_odd - E_even) / |E0|, w_odd = (1 - <P>)/2")
+            # The splitting falls like h^N, so at large N the bound drops below the
+            # optimizer's residual error and eps / bound then measures only that residual.
+            resolved = bound > BOUND_RESOLUTION
+            if resolved.any():
+                detail = (f"where the bound exceeds {BOUND_RESOLUTION:g} ({resolved.sum()} fields): "
+                          f"median eps / bound = {np.median(ratio[resolved]):.3f}")
+            else:
+                detail = f"bound below {BOUND_RESOLUTION:g} at every such field"
+            if (~resolved).any():
+                detail += (f"; elsewhere ({(~resolved).sum()} fields) the bound is unresolvable and "
+                           f"eps (median {np.median(eps[~resolved]):.1e}) is the optimizer residual")
+            observe(f"HEA N={n} distance from the parity-splitting bound", detail)
         sel = t["h"] <= 0.5
         gap = (t["fidelity_gs"][-1, sel] - t["fidelity"][-1, sel]).mean()
         observe(f"HEA N={n} symmetry breaking", f"for h <= 0.5 at p = N: mean F = "

@@ -1,0 +1,80 @@
+PHASE 2 SUMMARY: noiseless VQE for the open TFIM
+============================================================
+Sizes found: HVA [4, 6, 8, 10, 12], HEA [4, 6, 8, 10, 12]
+
+Field sweeps (relative error eps, ground-space fidelity F_GS)
+  HVA N= 4: at p = N, max eps over h = 7.38e-15, eps(h_c) = 6.35e-15, min F_GS = 1.00000; fraction of runs at max_iterations = 0.00
+  HVA N= 6: at p = N, max eps over h = 8.87e-04, eps(h_c) = 5.46e-06, min F_GS = 0.99807; fraction of runs at max_iterations = 0.00
+  HVA N= 8: at p = N, max eps over h = 3.03e-03, eps(h_c) = 6.03e-06, min F_GS = 0.99004; fraction of runs at max_iterations = 0.00
+  HVA N=10: at p = N, max eps over h = 1.12e-02, eps(h_c) = 6.17e-06, min F_GS = 0.95387; fraction of runs at max_iterations = 0.01
+  HVA N=12: at p = N, max eps over h = 5.38e-03, eps(h_c) = 6.03e-06, min F_GS = 0.96744; fraction of runs at max_iterations = 0.02
+  HEA N= 4: at p = N, max eps over h = 4.96e-13, eps(h_c) = 3.73e-16, min F_GS = 1.00000; fraction of runs at max_iterations = 0.02
+  HEA N= 6: at p = N, max eps over h = 1.28e-04, eps(h_c) = 2.35e-08, min F_GS = 1.00000; fraction of runs at max_iterations = 0.44
+  HEA N= 8: at p = N, max eps over h = 2.24e-03, eps(h_c) = 2.11e-05, min F_GS = 0.99842; fraction of runs at max_iterations = 0.64
+  HEA N=10: at p = N, max eps over h = 2.34e-03, eps(h_c) = 1.15e-04, min F_GS = 0.99721; fraction of runs at max_iterations = 0.77
+  HEA N=12: at p = N, max eps over h = 3.12e-03, eps(h_c) = 4.98e-04, min F_GS = 0.57182; fraction of runs at max_iterations = 0.84
+
+Validation checks
+  [PASS] variational principle: min eps over all runs = -7.92e-16 (must be >= 0)
+  [PASS] HVA stays in the even-parity sector: max |<P> - 1| = 6.4e-14
+  [PASS] HVA energy non-increasing in depth: max E(p) - E(p-1) = 5.4e-11
+  [PASS] N = 4 HVA near-unit fidelity: worst-case F over all fields: p=1: 0.505134, p=2: 0.794975, p=3: 0.987572, p=4: 1.000000; F > 0.999 everywhere from p = 4
+  [NOTE] required depth vs field: HVA N=4: p* = 2 (disordered, h >= 1.75), 3 (|h - h_c| <= 0.1), 4 (ordered, h <= 0.35); N+1 means not reached
+  [PASS] HVA: critical region needs more depth than the paramagnet: HVA N=6: p* = 2 (disordered, h >= 1.75), 5 (|h - h_c| <= 0.1), 6 (ordered, h <= 0.35); N+1 means not reached
+  [NOTE] HVA: ordered phase is the hardest region: HVA N=6: p* = 2 (disordered, h >= 1.75), 5 (|h - h_c| <= 0.1), 6 (ordered, h <= 0.35); N+1 means not reached. From |+> the HVA must build the cat state; with shared angles on an open chain this needs p > N (see vqe_hva_depthscan)
+  [PASS] HVA: critical region needs more depth than the paramagnet: HVA N=8: p* = 2 (disordered, h >= 1.75), 7 (|h - h_c| <= 0.1), 9 (ordered, h <= 0.35); N+1 means not reached
+  [NOTE] HVA: ordered phase is the hardest region: HVA N=8: p* = 2 (disordered, h >= 1.75), 7 (|h - h_c| <= 0.1), 9 (ordered, h <= 0.35); N+1 means not reached. From |+> the HVA must build the cat state; with shared angles on an open chain this needs p > N (see vqe_hva_depthscan)
+  [PASS] HVA: critical region needs more depth than the paramagnet: HVA N=10: p* = 2 (disordered, h >= 1.75), 8 (|h - h_c| <= 0.1), 11 (ordered, h <= 0.35); N+1 means not reached
+  [NOTE] HVA: ordered phase is the hardest region: HVA N=10: p* = 2 (disordered, h >= 1.75), 8 (|h - h_c| <= 0.1), 11 (ordered, h <= 0.35); N+1 means not reached. From |+> the HVA must build the cat state; with shared angles on an open chain this needs p > N (see vqe_hva_depthscan)
+  [PASS] HVA: critical region needs more depth than the paramagnet: HVA N=12: p* = 2 (disordered, h >= 1.75), 9 (|h - h_c| <= 0.1), 13 (ordered, h <= 0.35); N+1 means not reached
+  [NOTE] HVA: ordered phase is the hardest region: HVA N=12: p* = 2 (disordered, h >= 1.75), 9 (|h - h_c| <= 0.1), 13 (ordered, h <= 0.35); N+1 means not reached. From |+> the HVA must build the cat state; with shared angles on an open chain this needs p > N (see vqe_hva_depthscan)
+  [NOTE] required depth vs field: HEA N=4: p* = 1 (disordered, h >= 1.75), 2 (|h - h_c| <= 0.1), 2 (ordered, h <= 0.35); N+1 means not reached
+  [PASS] HEA: critical region needs the most depth: HEA N=6: p* = 2 (disordered, h >= 1.75), 2 (|h - h_c| <= 0.1), 1 (ordered, h <= 0.35); N+1 means not reached
+  [PASS] HEA: critical region needs the most depth: HEA N=8: p* = 2 (disordered, h >= 1.75), 4 (|h - h_c| <= 0.1), 1 (ordered, h <= 0.35); N+1 means not reached
+  [PASS] HEA: critical region needs the most depth: HEA N=10: p* = 2 (disordered, h >= 1.75), 7 (|h - h_c| <= 0.1), 1 (ordered, h <= 0.35); N+1 means not reached
+  [PASS] HEA: critical region needs the most depth: HEA N=12: p* = 2 (disordered, h >= 1.75), 13 (|h - h_c| <= 0.1), 1 (ordered, h <= 0.35); N+1 means not reached
+  [PASS] HEA N=6 symmetry-broken states respect the parity-splitting bound: 5 fields with F < 0.6 at p = N; min eps / bound = 1.005 (must be >= 1); bound = w_odd (E_odd - E_even) / |E0|, w_odd = (1 - <P>)/2
+  [NOTE] HEA N=6 distance from the parity-splitting bound: where the bound exceeds 1e-06 (4 fields): median eps / bound = 1.008; elsewhere (1 fields) the bound is unresolvable and eps (median 4.1e-07) is the optimizer residual
+  [NOTE] HEA N=6 symmetry breaking: for h <= 0.5 at p = N: mean F = 0.723, mean F_GS = 1.0000 (F_GS - F = 0.277; a symmetry-broken state has F = 1/2)
+  [PASS] HEA N=8 symmetry-broken states respect the parity-splitting bound: 12 fields with F < 0.6 at p = N; min eps / bound = 1.023 (must be >= 1); bound = w_odd (E_odd - E_even) / |E0|, w_odd = (1 - <P>)/2
+  [NOTE] HEA N=8 distance from the parity-splitting bound: where the bound exceeds 1e-06 (9 fields): median eps / bound = 1.044; elsewhere (3 fields) the bound is unresolvable and eps (median 1.7e-07) is the optimizer residual
+  [NOTE] HEA N=8 symmetry breaking: for h <= 0.5 at p = N: mean F = 0.501, mean F_GS = 1.0000 (F_GS - F = 0.499; a symmetry-broken state has F = 1/2)
+  [PASS] HEA N=10 symmetry-broken states respect the parity-splitting bound: 14 fields with F < 0.6 at p = N; min eps / bound = 1.086 (must be >= 1); bound = w_odd (E_odd - E_even) / |E0|, w_odd = (1 - <P>)/2
+  [NOTE] HEA N=10 distance from the parity-splitting bound: where the bound exceeds 1e-06 (9 fields): median eps / bound = 1.277; elsewhere (5 fields) the bound is unresolvable and eps (median 2.3e-06) is the optimizer residual
+  [NOTE] HEA N=10 symmetry breaking: for h <= 0.5 at p = N: mean F = 0.500, mean F_GS = 0.9999 (F_GS - F = 0.500; a symmetry-broken state has F = 1/2)
+  [PASS] HEA N=12 symmetry-broken states respect the parity-splitting bound: 16 fields with F < 0.6 at p = N; min eps / bound = 1.193 (must be >= 1); bound = w_odd (E_odd - E_even) / |E0|, w_odd = (1 - <P>)/2
+  [NOTE] HEA N=12 distance from the parity-splitting bound: where the bound exceeds 1e-06 (10 fields): median eps / bound = 3.143; elsewhere (6 fields) the bound is unresolvable and eps (median 1.4e-05) is the optimizer residual
+  [NOTE] HEA N=12 symmetry breaking: for h <= 0.5 at p = N: mean F = 0.500, mean F_GS = 0.9998 (F_GS - F = 0.500; a symmetry-broken state has F = 1/2)
+
+Warm start versus cold start (T2.5)
+  HVA N=8 p=4: points with eps < 0.001: cold 0.44, warm 0.46; max eps cold 1.15e-01, warm 1.15e-01
+      gradient evaluations per optimization: cold 152, warm 41; total per sweep: cold 47410, warm 3505
+  [PASS] HVA warm start speeds up convergence at equal accuracy: 3.7x fewer evaluations per optimization, 13.5x less total work, converged fraction 0.46 (warm) vs 0.44 (cold)
+  HEA N=8 p=4: points with eps < 0.001: cold 0.97, warm 0.79; max eps cold 1.42e-03, warm 6.75e-03
+      gradient evaluations per optimization: cold 1041, warm 623; total per sweep: cold 324677, warm 31578
+  [NOTE] HEA warm start: 1.7x fewer evaluations per optimization, 10.3x less total work, converged fraction 0.79 (warm) vs 0.97 (cold). Most HEA runs stop at max_iterations either way, so warm starting alone is cheaper but less reliable; the main sweeps therefore combine the warm start with random restarts
+
+Periodic HVA at p = N/2 (known exact result, Ho & Hsieh 2019)
+  N= 4: eps = 2.7e-15, 3.2e-15, 2.9e-15   min F = 1.000000000000
+  N= 6: eps = 5.8e-15, 5.2e-15, 5.5e-15   min F = 1.000000000000
+  N= 8: eps = 1.3e-14, 1.4e-14, 1.2e-14   min F = 1.000000000000
+  N=10: eps = 2.2e-14, 2.1e-14, 2.1e-14   min F = 1.000000000000
+  [PASS] periodic HVA exact at p = N/2: max eps = 2.2e-14
+
+Open-chain HVA depth scan: smallest p with eps < 1e-06
+  N= 4: h=0.5: p = 4 (1.00 N), h=1: p = 4 (1.00 N), h=1.5: p = 4 (1.00 N)
+  N= 6: h=0.5: p = 9 (1.50 N), h=1: p = 8 (1.33 N), h=1.5: p = 7 (1.17 N)
+  N= 8: h=0.5: p = 13 (1.62 N), h=1: p = 12 (1.50 N), h=1.5: p = 9 (1.12 N)
+  N=10: h=0.5: p = 20 (2.00 N), h=1: p = 17 (1.70 N), h=1.5: p = 10 (1.00 N)
+
+Barren plateaus (T2.7): fits of Var[d C / d theta] for the light-cone parameter
+  hea_linear  local : exp(-b N) with b = 0.690 +/- 0.008;  N^(-k) with k = 5.46 +/- 0.50   (N = 4..14)
+  hea_linear  energy: exp(-b N) with b = 0.734 +/- 0.018;  N^(-k) with k = 5.85 +/- 0.40   (N = 4..14)
+  hea_fixed   local : exp(-b N) with b = 0.293 +/- 0.016;  N^(-k) with k = 2.35 +/- 0.13   (N = 4..14)
+  hea_fixed   energy: exp(-b N) with b = 0.399 +/- 0.042;  N^(-k) with k = 3.27 +/- 0.08   (N = 4..14)
+  hva_linear  local : exp(-b N) with b = 0.085 +/- 0.016;  N^(-k) with k = 0.72 +/- 0.07   (N = 4..14)
+  hva_linear  energy: exp(-b N) with b = 0.054 +/- 0.015;  N^(-k) with k = 0.46 +/- 0.10   (N = 4..14)
+  [PASS] HEA (p = N) decays like a 2-design: b = 0.690, ln 2 = 0.693
+  [PASS] HVA has no barren plateau: HVA b = 0.085 vs HEA b = 0.690; the HVA decay is polynomial (free-fermion algebra)
+
+Checks: 20 passed, 0 failed, 15 notes
