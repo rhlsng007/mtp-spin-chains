@@ -41,7 +41,7 @@ Scripts are always run from the project root, e.g. `python experiments\phase1_ed
 - Sleep is disabled on mains power (`powercfg /change standby-timeout-ac 0`); Modern Standby otherwise pauses all workers. Check for pauses with Kernel-Power events 506/507.
 - The Desktop is redirected by OneDrive; use `$HOME\Downloads` in commands.
 
-**Git workflow (settled in Phase 2):** one branch per phase (`phaseN-...`); commit the code before running experiments, so every result records the commit that produced it; merge with `--no-ff`; tag `phaseN-complete`. Tags are lightweight, so push them explicitly (`git push origin <tag>`); `--follow-tags` skips them. Tags so far: `phase1-complete` (6051c9d), `phase2-complete` (0f7015c).
+**Git workflow (settled in Phase 2):** one branch per phase (`phaseN-...`); commit the code before running experiments, so every result records the commit that produced it; merge with `--no-ff`; tag `phaseN-complete`. Tags are lightweight, so push them explicitly (`git push origin <tag>`); `--follow-tags` skips them. Tags so far: `phase1-complete` (6051c9d), `phase2-complete` (0f7015c), `phase3-complete` (9110ea2).
 
 ## 4. Project structure
 
@@ -50,20 +50,21 @@ mtp-spin-chains/
 ├── config.py              # all parameters and seeds (single source of truth)
 ├── models/                # hamiltonians.py, exact.py           (Phase 1, done)
 ├── analysis/              # entanglement.py, observables.py,
-│                          # free_fermion.py                      (Phase 1 done; Phase 3)
+│                          # free_fermion.py                      (Phase 1, done)
+│                          # vqe_entanglement.py                  (Phase 3, done)
 ├── vqe/                   # ansatz.py, statevector.py, optimize.py, gradients.py,
 │                          # metrics.py, pennylane_ref.py         (Phase 2, done)
 ├── noise/                 # channels.py, mitigation.py           (Phase 4, 5)
 ├── ml/                    # dataset.py, classifiers.py           (Phase 6, 7)
 ├── utils/                 # io.py, seeding.py, plotting.py       (Phase 0, done)
 ├── experiments/           # one script per thesis figure
-├── scripts/               # check_env.py, phase2_report_data.py
-├── tests/                 # test_phase0.py, test_phase1.py, test_phase2.py
+├── scripts/               # check_env.py, phase2_report_data.py, phase3_report_data.py
+├── tests/                 # test_phase0.py ... test_phase3.py (180 tests)
 ├── results/               # .npz data + .json metadata (gitignored; back up separately)
 └── figures/               # .pdf tracked in git, .png gitignored
 ```
 
-`results/` is gitignored, so the Phase 1 and Phase 2 data exist only locally. Keep a backup zip of `results\phase1` and `results\phase2` outside the repo; regenerating Phase 2 takes about 3 hours.
+`results/` is gitignored, so all result data exist only locally. Keep a backup zip of `results\phase1` to `results\phase3` outside the repo; regenerating Phase 2 takes about 3 hours, Phase 3 about 6 minutes.
 
 ## 5. Existing utilities (Phase 0)
 
@@ -74,7 +75,7 @@ mtp-spin-chains/
 - `CFG.cluster.h1_grid()`: 0 to 1.6, step 0.1; `CFG.cluster.h2_values = (-1.0, 0.0, 1.0)`.
 - `CFG.system.sizes_exact = (4, 6, 8, 10, 12, 14)`, `sizes_noiseless = (4, ..., 12)`, `sizes_noisy = (4, 6, 8)`, `CFG.system.depths(N, noisy)` (1..N noiseless, 1..N/2 noisy).
 - `CFG.ed` (added in Phase 1): `k_per_sector=3`, `dense_max_dim=512`, `eigsh_tol=0` (machine precision), `degeneracy_tol=1e-9`, `eigsh_seed=0`, `save_states=True`, `cc_ell_min=2`, `cc_boundaries=("open","periodic")`, `xxz_cc_deltas=(0.0, 0.5)`. `CFG.cluster.boundary = "open"` was also added.
-- `CFG.vqe` (extended in Phase 2, see Section 9), `CFG.noise.strengths()` (0 plus 10 log-spaced values from 1e-4 to 5e-2), `CFG.ml`, `CFG.seeds.seeds(noisy)` (master seed 2026).
+- `CFG.vqe` (extended in Phase 2, see Section 9), `CFG.ent` (added in Phase 3, see Section 10), `CFG.noise.strengths()` (0 plus 10 log-spaced values from 1e-4 to 5e-2), `CFG.ml`, `CFG.seeds.seeds(noisy)` (master seed 2026).
 - Paths: `RESULTS_DIR`, `FIGURES_DIR`. Helper `make_grid(start, stop, step)` avoids floating-point drift.
 
 **`utils/io.py`:** `save_results(name, arrays, params, subdir)`, `load_results(name, subdir)`, `result_exists(...)`, `load_or_compute(name, compute_fn, params, subdir, recompute=False)`. Metadata JSON stores params, full config, timestamp, git commit, package versions.
@@ -165,6 +166,18 @@ $$
 \epsilon \;\ge\; w_{\text{odd}}\, \frac{E_{\text{odd}} - E_{\text{even}}}{|E_0|}, \qquad w_{\text{odd}} = \frac{1 - \langle P \rangle}{2}
 $$
 
+**Entanglement bounds for depth-p circuits on open chains (Phase 3):** one two-qubit gate per layer crosses any cut, so
+
+$$
+S_\alpha(\ell) \le \min(p,\ \ell,\ N-\ell)\,\ln 2, \qquad F \le \sum_{k=1}^{2^p} \lambda_k(\phi_{\text{ref}})
+$$
+
+**Fannes–Audenaert continuity (Phase 3), d = 2^(N/2):**
+
+$$
+|S_{\text{VQE}} - S_{\text{ref}}| \le T\ln(d-1) + H_2(T), \qquad T = \sqrt{1 - F_{\text{GS}}}
+$$
+
 **Mixed-state measures (Phase 4):**
 
 $$
@@ -178,8 +191,8 @@ $$
 | 0 | Environment, project structure, utilities | **Done** |
 | 1 | Exact diagonalization baseline and entanglement | **Done** |
 | 2 | Noiseless VQE: HVA and HEA, warm start, random restarts, barren plateaus | **Done** |
-| 3 | Entanglement of VQE states, central-charge extraction vs depth | **Next** |
-| 4 | Noisy density-matrix simulation (N = 4–8), shots, SPSA, noise sweeps | |
+| 3 | Entanglement of VQE states, central-charge extraction vs depth | **Done** |
+| 4 | Noisy density-matrix simulation (N = 4–8), shots, SPSA, noise sweeps | **Next** |
 | 5 | Error mitigation: readout correction, ZNE with gate folding | |
 | 6 | ML datasets: correlators, classical shadows, clean and noisy | |
 | 7 | ML: logistic regression, MLP, PCA, optional QCNN, cross-noise tests | |
@@ -275,8 +288,53 @@ $$
 - Entanglement comparisons are made per ansatz: HVA states are parity eigenstates (cat-state ln 2 plateau expected), HEA states in the ordered phase are symmetry broken (reduced entanglement expected).
 - Both ansätze are kept for the noisy phases (4 and 5): at p ≤ N/2 the HEA is the more accurate one.
 
-**Open, not blocking Phase 3:**
+**Resolved in Phase 3:** the HEA point at N = 12, h = 0.85 (F_GS ≈ 0.52 to 0.57 for every p ≥ 3, not only p = 12) is a symmetry-broken state on the parity-splitting floor (⟨P⟩ = 0.15, ε = 3.1e-3 = 1.2 times the bound), one grid point past the ground-space cutoff (splitting / gap = 0.108 > 0.1). Not an optimizer failure; no rerun needed.
 
-- [ ] Rerun `vqe_hea_N12_p12` with a higher `max_iterations` (about 1 hour) to decide whether the h = 0.85 failure is an iteration-budget effect or untrainability.
+**Open, not blocking:**
+
 - [ ] Optional housekeeping: move the legend in the top-right panel of `vqe_error_vs_depth`; drop the PDF `CreationDate` in `utils/plotting.py` so re-plotting does not mark PDFs as modified; add a `-dirty` flag to the git commit recorded by `utils/io.py`.
 - [ ] Check the 14 references of the Phase 2 report before submission.
+- [ ] Check the 9 references of the Phase 3 report before submission.
+
+## 10. Phase 3: completed
+
+**Status:** done; merged into `main` at 9110ea2, tag `phase3-complete`. Results produced at commit 1441fc3 (plot check refined in aa8a4e7). `pytest -q`: 180 tests pass in 70 s (25 for Phase 3). `experiments\phase3_plots.py`: 12 checks passed, 0 failed, 9 notes. Report: the Claude Doc "Phase 3: Entanglement Analysis of VQE States" (https://claude.ai/artifact/Ptt7MBm516srhNMd7FREQG).
+
+**How to run (from the project root, after Phases 1 and 2):**
+
+- `python experiments\phase3_entanglement.py --workers 12` (about 6 minutes; `--experiments ed states maxent pbc`; `--sizes`, `--ansatze`, `--recompute`). Cached per file.
+- `python experiments\phase3_plots.py` (6 figures in `figures/phase3/` and `results/phase3/phase3_summary.txt`).
+- `python scripts\phase3_report_data.py` (compact numbers in `results/phase3/phase3_report_data.json`).
+
+**API (`analysis.vqe_entanglement`, for Phase 4 onward):** `profile_data(psi, rank_tol)` (S, S_2 and Schmidt rank at every cut), `schmidt_rank`, `entropy_bound(p, N)`, `page_entropy(N)`, `symmetry_broken_state(phi_even, phi_odd)`, `projected_reference(psi, sector_states, mask)` (nearest ground-space state and F_GS), `audenaert_bound(F, d)`, `rank_fidelity_bound(phi, rank)`, `PurityOperator(N, ell)` (acts as rho_A (x) 1 inside `Ansatz.energy_and_grad`; true purity gradient = 2 x returned gradient), `purity_and_grad`, `maximize_entanglement(ansatz, x0, maxiter, gtol)`. Reuses the Phase 1 routines in `analysis.entanglement`, which accept complex states.
+
+**`CFG.ent` (added in Phase 3):** `rank_tol=1e-14`, `cc_field=1.0`, `cc_ell_min=2`, `maxent_starts=6`, `maxent_maxiter=500`, `maxent_gtol=1e-9`, `random_samples=200`, `pbc_sizes=(4,...,12)`, `bound_tol=1e-9`, `fidelity_resolution=1e-14` (1 − F floored at this in the Fannes–Audenaert check, since S is not Lipschitz near F = 1).
+
+**Conventions fixed in Phase 3:**
+
+- Every VQE state is compared with the exact state of its own symmetry: the nearest ground-space state P_GS psi / |P_GS psi| (= phi_even for the HVA; close to the symmetry-broken state (phi_even + phi_odd)/sqrt 2 for a symmetry-broken HEA state). Its overlap with psi is F_GS.
+- Calabrese–Cardy fits use the Phase 1 window 2 ≤ ℓ ≤ N/2. HEA profiles are not mirror symmetric (up to 0.03 at p = N; the CNOT staircase runs one way), so S(ℓ) ≠ S(N − ℓ) for the HEA; fits use the left half as in Phase 1.
+- Experiment seed keys: maxent 8, random samples 9, periodic HVA 10.
+
+**Saved files in `results/phase3/`:**
+
+- `ent_ed_N{N}`: `h`, `S_even`, `S2_even`, `S_odd`, `S_broken`, `S2_broken` (each [n_h, N − 1]), `ground_space`, `E0`, `S_half_phase1`.
+- `ent_{hva|hea}_N{N}`: `S`, `S2`, `rank`, `S_ref`, `S2_ref` (each [n_p, n_h, N − 1]); `fidelity_gs`, `audenaert`, `rank_fidelity_bound` ([n_p, n_h]); `h`, `depths`.
+- `maxent_{hva|hea}_N{N}`: `depths`, `S2_max`, `S_at_S2_max`, `S2_starts`, `random_S_mean`, `random_S_max`, `random_S2_mean`, `n_iter_best`.
+- `pbc_hva_N{N}`: periodic HVA at h_c for p = 1..N/2: `energy`, `E0`, `rel_error`, `fidelity`, `S`, `S2`, `S_ed`, `S2_ed`, `states`.
+
+**Key results:**
+
+- Capacity is not the bottleneck: both ansaetze reach the rank bound p ln 2 exactly for every p < N/2 (all N), while the ground state never needs more than ln 2. At h_c, N = 12, rank 2 (p = 1) already allows F = 0.9989, but the optimized states reach 0.73 (HVA) and 0.50 (HEA); from p = 3 the rank allows infidelities below 1e-10.
+- For p ≥ N/2 the maximal-entanglement search falls short in five cases (HEA N = 10, p = 9, 10: 0.92; HEA N = 12, p = 11, 12: 0.92, 0.90; HVA N = 12, p = 6: 0.83): purity is a global cost with barren plateaus. Still at least 5 times what any ground state needs.
+- Random parameters: HEA mean S within 1 % of the Page value (2-design, consistent with the barren plateau); HVA about a third of it (free-fermion manifold).
+- Half-chain entropy at p = N, N = 12: ED 0.3965 at h_c, HVA 0.3986, HEA 0.3791. Ordered phase (h = 0.1): ED even ln 2, HVA 0.7001 (slightly above ln 2; about 0.9 at p = 6), HEA 0 (symmetry broken, matching the ED symmetry-broken state, 6e-6).
+- The symmetry-broken HEA states show the entropy peak the open-chain even state lacks: at h = 0.70, 0.80, 0.90 (N = 8, 10, 12), against 0.80, 0.85, 0.85 for the symmetry-matched exact reference.
+- Central charge at h_c: shallow circuits give c ≈ 0 (area law; HVA c = 0 for p ≤ 2). Open chains, N = 12: ED 0.564, HVA 0.661 (p = N/2) and 0.597 (p = N, 6 % high despite ε ≈ 6e-6), HEA 0.380 and 0.515. HVA approaches from above (peak 0.75 at p = 8), HEA from below (within 1 % for N ≤ 10). Periodic HVA, N = 12: c(p) = 0, 0.157, 0.314, 0.472, 0.564, 0.502 (exact 0.502 at p = N/2).
+- All 3,120 states obey the Schmidt-rank, Eckart–Young and Fannes–Audenaert bounds; entropy errors lie 1 to 3 orders of magnitude below the Fannes–Audenaert bound.
+
+**Decisions taken at the end of Phase 3:**
+
+- The ground-space cutoff stays at 0.1 times the in-sector gap, so the Phase 2 numbers are unchanged; the N = 12, h = 0.85 point is reported with its explanation.
+- Phase 4 tracks S(N/2), purity, mutual information and logarithmic negativity as the primary entanglement metrics, compared per ansatz and per depth with the noiseless Phase 3 values (not with ED). The central charge is reported only at the deepest noisy depth p = N/2, as a secondary quantity, since at p ≤ N/2 it is set by depth (HVA 0 to 0.69, HEA up to 0.54).
+- Noisy entropies are compared with the noiseless value of the same ansatz and depth, and with the matching symmetry reference.
