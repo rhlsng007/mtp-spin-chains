@@ -1,0 +1,64 @@
+PHASE 3 SUMMARY: entanglement of VQE states, open TFIM
+============================================================
+Found: ED [4, 6, 8, 10, 12], states [('hea', 4), ('hea', 6), ('hea', 8), ('hea', 10), ('hea', 12), ('hva', 4), ('hva', 6), ('hva', 8), ('hva', 10), ('hva', 12)], maxent [('hea', 4), ('hea', 6), ('hea', 8), ('hea', 10), ('hea', 12), ('hva', 4), ('hva', 6), ('hva', 8), ('hva', 10), ('hva', 12)], periodic [4, 6, 8, 10, 12]
+
+Half-chain entropy at h_c (p = N) and in the ordered phase (h = 0.1)
+  N= 4: ED even S(h_c) = 0.2849, S(0.1) = 0.6930; broken S(0.1) = 0.0000; HVA S(h_c) = 0.2849, S(0.1) = 0.6930; HEA S(h_c) = 0.2849, S(0.1) = 0.6930
+  N= 6: ED even S(h_c) = 0.3280, S(0.1) = 0.6932; broken S(0.1) = 0.0000; HVA S(h_c) = 0.3286, S(0.1) = 0.6934; HEA S(h_c) = 0.3280, S(0.1) = 0.0000
+  N= 8: ED even S(h_c) = 0.3572, S(0.1) = 0.6932; broken S(0.1) = 0.0000; HVA S(h_c) = 0.3588, S(0.1) = 0.6986; HEA S(h_c) = 0.3563, S(0.1) = 0.0000
+  N=10: ED even S(h_c) = 0.3791, S(0.1) = 0.6932; broken S(0.1) = 0.0000; HVA S(h_c) = 0.3809, S(0.1) = 0.6980; HEA S(h_c) = 0.3766, S(0.1) = 0.0000
+  N=12: ED even S(h_c) = 0.3965, S(0.1) = 0.6932; broken S(0.1) = 0.0000; HVA S(h_c) = 0.3986, S(0.1) = 0.7001; HEA S(h_c) = 0.3791, S(0.1) = 0.0000
+
+Location of the entropy maximum over h (p = N, half chain)
+  N= 4: HVA h = 0.10, HEA h = 0.10, ED broken-or-even h = 0.65
+  N= 6: HVA h = 0.25, HEA h = 0.35, ED broken-or-even h = 0.75
+  N= 8: HVA h = 0.30, HEA h = 0.70, ED broken-or-even h = 0.80
+  N=10: HVA h = 0.10, HEA h = 0.80, ED broken-or-even h = 0.85
+  N=12: HVA h = 0.25, HEA h = 0.90, ED broken-or-even h = 0.85
+
+Central charge at h_c (Calabrese-Cardy, ell_min = 2, ell <= N/2)
+  N= 6: ED open 0.5769; HVA p=N/2 0.6640, p=N 0.5833; HEA p=N/2 0.5080, p=N 0.5769
+  N= 8: ED open 0.5724; HVA p=N/2 0.6923, p=N 0.6042; HEA p=N/2 0.5387, p=N 0.5668
+  N=10: ED open 0.5681; HVA p=N/2 0.6697, p=N 0.6014; HEA p=N/2 0.5024, p=N 0.5625
+  N=12: ED open 0.5644; HVA p=N/2 0.6605, p=N 0.5967; HEA p=N/2 0.3802, p=N 0.5154
+  periodic HVA N= 6: c(p) = 0.0000, 0.8739, 0.5050; ED periodic 0.5050
+  periodic HVA N= 8: c(p) = -0.0000, 0.4326, 0.5832, 0.5036; ED periodic 0.5036
+  periodic HVA N=10: c(p) = 0.0000, 0.2160, 0.4252, 0.5641, 0.5029; ED periodic 0.5029
+  periodic HVA N=12: c(p) = 0.0000, 0.1570, 0.3135, 0.4717, 0.5635, 0.5024; ED periodic 0.5024
+
+Maximal half-chain entanglement per depth (T3.3)
+  HEA N= 4: min S2_max / bound = 1.0000; random mean S at p = N: 0.895 (Page 0.922, max 2 ln 2 = 1.386)
+  HEA N= 6: min S2_max / bound = 1.0000; random mean S at p = N: 1.555 (Page 1.589, max 3 ln 2 = 2.079)
+  HEA N= 8: min S2_max / bound = 1.0000; random mean S at p = N: 2.239 (Page 2.275, max 4 ln 2 = 2.773)
+  HEA N=10: min S2_max / bound = 0.9230; random mean S at p = N: 2.933 (Page 2.966, max 5 ln 2 = 3.466)
+  HEA N=12: min S2_max / bound = 0.9008; random mean S at p = N: 3.628 (Page 3.659, max 6 ln 2 = 4.159)
+  HVA N= 4: min S2_max / bound = 1.0000; random mean S at p = N: 0.743 (Page 0.922, max 2 ln 2 = 1.386)
+  HVA N= 6: min S2_max / bound = 1.0000; random mean S at p = N: 0.944 (Page 1.589, max 3 ln 2 = 2.079)
+  HVA N= 8: min S2_max / bound = 1.0000; random mean S at p = N: 1.091 (Page 2.275, max 4 ln 2 = 2.773)
+  HVA N=10: min S2_max / bound = 1.0000; random mean S at p = N: 1.175 (Page 2.966, max 5 ln 2 = 3.466)
+  HVA N=12: min S2_max / bound = 0.8333; random mean S at p = N: 1.328 (Page 3.659, max 6 ln 2 = 4.159)
+
+Validation checks
+  [PASS] ED entropies reproduce Phase 1: max difference 0.0e+00
+  [PASS] Schmidt rank <= 2^p at every cut (all VQE states): one two-qubit gate per layer crosses any cut
+  [PASS] S and S_2 <= min(p, ell, N - ell) ln 2 (all VQE states): largest excess -4.3e-03
+  [PASS] |S_VQE - S_ref| <= Fannes-Audenaert bound (all VQE states): largest excess -1.8e-06 (negative = inside the bound); 1 - F floored at 1e-14
+  [PASS] F_GS <= Schmidt-rank fidelity bound (all VQE states): largest excess 5.6e-16
+  [PASS] HVA N=4, p=4 reproduces ED entanglement: max |S - S_ref| over all cuts and fields = 2.1e-08
+  [PASS] HEA N=4, p=4 reproduces ED entanglement: max |S - S_ref| over all cuts and fields = 2.0e-08
+  [PASS] periodic HVA at p = N/2 reproduces ED entanglement and c: max |S - S_ED| = 1.2e-09, max |c - c_ED| = 2.0e-10
+  [PASS] periodic ED central charge close to 1/2: N = 12: c = 0.5024
+  [PASS] maximal S_2 within the rank bound: largest excess 4.8e-14
+  [PASS] both ansaetze reach the rank bound p ln 2 for p < N/2: smallest S2_max / bound = 1.0000
+  [NOTE] maximal entanglement for p >= N/2 (bound (N/2) ln 2): below the bound at HEA N=10 p=9 (0.924), HEA N=10 p=10 (0.923), HEA N=12 p=11 (0.918), HEA N=12 p=12 (0.901), HVA N=12 p=6 (0.833); smallest reached S_2 there is still 0.83 x (N/2) ln 2, far above the ln 2 an ED ground state needs
+  [PASS] ED limits deep in the ordered phase (h = 0.1): N = 12: even S = 0.69315 (ln 2 = 0.69315), broken S = 6.21e-06
+  [NOTE] HVA mirror symmetry of S(ell): max |S(ell) - S(N - ell)| at p = N: 8.9e-16
+  [NOTE] HEA mirror symmetry of S(ell): max |S(ell) - S(N - ell)| at p = N: 3.2e-02 (the CNOT staircase runs one way; fits use ell <= N/2 as in Phase 1)
+  [NOTE] HEA N=8 rank bound vs achieved fidelity at h_c: largest gap at p = 1: bound F <= 0.9996, achieved F_GS = 0.6576
+  [NOTE] HEA N=10 rank bound vs achieved fidelity at h_c: largest gap at p = 1: bound F <= 0.9992, achieved F_GS = 0.5570
+  [NOTE] HEA N=12 rank bound vs achieved fidelity at h_c: largest gap at p = 1: bound F <= 0.9989, achieved F_GS = 0.4978
+  [NOTE] HVA N=8 rank bound vs achieved fidelity at h_c: largest gap at p = 1: bound F <= 0.9996, achieved F_GS = 0.8523
+  [NOTE] HVA N=10 rank bound vs achieved fidelity at h_c: largest gap at p = 1: bound F <= 0.9992, achieved F_GS = 0.7924
+  [NOTE] HVA N=12 rank bound vs achieved fidelity at h_c: largest gap at p = 1: bound F <= 0.9989, achieved F_GS = 0.7337
+
+Checks: 12 passed, 0 failed, 9 notes

@@ -167,6 +167,24 @@ class VQEConfig:
 
 
 # ---------------------------------------------------------------------------
+# Entanglement of VQE states (Phase 3)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class EntanglementConfig:
+    rank_tol: float = 1e-14             # Schmidt weights above this count toward the rank
+    cc_field: float = 1.0               # field of the central-charge analysis (h_c)
+    cc_ell_min: int = 2                 # Calabrese-Cardy fits use ell_min <= ell <= N/2 (as Phase 1)
+    maxent_starts: int = 6              # starts for maximizing the half-chain S_2 per (ansatz, N, p)
+    maxent_maxiter: int = 500
+    maxent_gtol: float = 1e-9
+    random_samples: int = 200           # uniform random parameter draws per (ansatz, N, p)
+    pbc_sizes: tuple = (4, 6, 8, 10, 12)  # periodic HVA at h_c, p = 1..N/2
+    bound_tol: float = 1e-9             # slack allowed in the rigorous-bound checks
+    fidelity_resolution: float = 1e-14  # 1 - F below this is rounding; floor used in the
+                                        # Fannes-Audenaert check (S is not Lipschitz near F = 1)
+
+
+# ---------------------------------------------------------------------------
 # Noise
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -224,6 +242,7 @@ class Config:
     system: SystemConfig = field(default_factory=SystemConfig)
     ed: EDConfig = field(default_factory=EDConfig)
     vqe: VQEConfig = field(default_factory=VQEConfig)
+    ent: EntanglementConfig = field(default_factory=EntanglementConfig)
     noise: NoiseConfig = field(default_factory=NoiseConfig)
     ml: MLConfig = field(default_factory=MLConfig)
     seeds: SeedConfig = field(default_factory=SeedConfig)
@@ -247,3 +266,4 @@ if __name__ == "__main__":
     print("Seeds:                  ", CFG.seeds.seeds())
     print("ED settings:            ", CFG.ed)
     print("VQE settings:           ", CFG.vqe)
+    print("Entanglement settings:  ", CFG.ent)
