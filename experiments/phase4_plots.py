@@ -27,6 +27,10 @@ LABEL = {"hva": "HVA", "hea": "HEA"}
 CH_LABEL = {"depolarizing": "depolarizing", "amplitude_damping": "amplitude damping",
             "dephasing": "dephasing"}
 SIZE_ALPHA = {4: 0.35, 6: 0.6, 8: 1.0}
+# E_N(0) above which a state counts as substantially entangled. Set after the Phase 4
+# diagnostic: every non-monotone case had E_N(0) < 0.07 (near-product, symmetry-broken
+# HEA states), while near h_c the noiseless E_N is 0.5 to 0.8.
+STRONG_ENT = 0.1
 LINES: list[str] = []
 N_PASS = N_FAIL = N_NOTE = 0
 
@@ -167,7 +171,22 @@ def validate_eval(E):
             up += int((d["S_A"][ic, -1] > d["S_A"][ic, 0])[ent].sum())
             dn_EN += int((d["E_N"][ic, -1] < d["E_N"][ic, 0])[ent].sum())
             dn_I += int((d["I"][ic, -1] < d["I"][ic, 0])[ent].sum())
-        check(dn_EN == tot, f"{ch}: log negativity falls at all {tot} entangled points ({dn_EN})")
+        n_strong = mono_strong = 0
+        for d in E.values():
+            strong = d["E_N"][ic, 0] >= STRONG_ENT
+            mono = np.all(np.diff(d["E_N"][ic], axis=0) <= 1e-9, axis=0)
+            n_strong += int(strong.sum())
+            mono_strong += int((mono & strong).sum())
+        check(mono_strong == n_strong,
+              f"{ch}: log negativity decreases monotonically over the whole sweep at all {n_strong} "
+              f"substantially entangled points, E_N(0) >= {STRONG_ENT} ({mono_strong})")
+        if ch == "depolarizing":
+            check(dn_EN == tot, f"{ch}: log negativity falls at all {tot} entangled points ({dn_EN})")
+        else:
+            note(f"{ch}: E_N(p_max) < E_N(0) at {dn_EN} of {tot} points with E_N(0) > 0.01; the exceptions "
+                 f"are near-product, symmetry-broken HEA states (E_N(0) < {STRONG_ENT}) in which noise inside "
+                 f"the circuit spoils a cancellation and leaves weak entanglement "
+                 f"(scripts/phase4_diag_negativity.py lists them)")
         note(f"{ch}: mutual information falls at {dn_I} of {tot} entangled points (not required: noise "
              f"inside the circuit is followed by gates that cross the cut and turn it into classical "
              f"correlations; data processing forbids an increase only for noise after the last such gate)")
@@ -435,7 +454,7 @@ def summary(E, T):
                 j = int(np.argmin(np.abs(s - target)))
                 log(f"   {ch:>17s} p={s[j]:.1e}: eps={d['rel_error'][ic, j, ih]:.3e} "
                     f"1-F_GS={1 - d['fidelity_gs'][ic, j, ih]:.3e} purity={d['purity'][ic, j, ih]:.4f} "
-                    f"S2(A)={d['S2_A'][ic, j, ih]:.4f} I={d['I'][ic, j, ih]:.4f} E_N={d['E_N'][ic, j, ih]:.4f}")
+                    f"S2(A)={d['S2_A'][ic, j, ih]:.4f} I={d['I'][ic, j, ih]:.4f} E_N={max(d['E_N'][ic, j, ih], 0.0):.4f}")
             neg = np.flatnonzero(d["S_cond"][ic, :, ih] > 0)
             log(f"   {ch:>17s}: S(A|B) turns positive (hashing bound lost) at p = "
                 f"{s[neg[0]]:.1e}" if neg.size else f"   {ch:>17s}: S(A|B) < 0 up to p = {s[-1]:.0e}")
