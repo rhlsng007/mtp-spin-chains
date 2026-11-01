@@ -160,10 +160,22 @@ class VQEConfig:
     grad_var_fixed_depth: int = 2       # shallow comparison depth (besides p = N)
     grad_var_field: float = 1.0         # TFIM cost function evaluated at h = h_c
 
-    # SPSA (Phase 4)
+    # SPSA (Phase 4, T4.3)
     spsa_iterations: int = 500
-    spsa_a: float = 0.2                 # SPSA learning-rate scale
-    spsa_c: float = 0.1                 # SPSA perturbation scale
+    spsa_a: float = 0.2                 # generic default of vqe.spsa (target first step)
+    spsa_c: float = 0.1                 # generic default perturbation scale
+    spsa_alpha: float = 0.602           # a_k = a / (k + 1 + A)^alpha  (Spall)
+    spsa_gamma: float = 0.101           # c_k = c / (k + 1)^gamma      (Spall)
+    spsa_A_fraction: float = 0.1        # A = fraction * spsa_iterations
+    spsa_calibration_steps: int = 20    # random directions in the gain calibration
+    spsa_average_last: int = 50         # Polyak averaging over the last iterates
+    # Per-ansatz settings tuned in Phase 4 (HVA: 2p parameters that each move a
+    # whole layer, so a 0.05 rad first step already diverges at h = 1):
+    spsa_target_hva: float = 0.02       # first-step size per parameter, cold start
+    spsa_c_hva: float = 0.05
+    spsa_target_hea: float = 0.1
+    spsa_c_hea: float = 0.1
+    spsa_warm_factor: float = 0.1       # warm starts use factor * cold gain
 
 
 # ---------------------------------------------------------------------------
@@ -195,6 +207,17 @@ class NoiseConfig:
     channels: tuple = ("depolarizing", "amplitude_damping", "dephasing")
     shots_list: tuple = (1000, 5000, 10000)
     zne_scale_factors: tuple = (1, 3, 5)
+
+    # Phase 4 additions
+    two_qubit_factor: float = 1.0       # p_2q = factor * p (IBM devices: about 10)
+    noisy_rz: bool = True               # False = virtual RZ (noiseless), as on IBM hardware
+    noisy_state_prep: bool = True       # the HVA Hadamard layer carries gate noise
+    shot_repetitions: int = 50          # independent finite-shot estimates per point (T4.2)
+    train_shots: int = 10000            # shots per basis per energy in SPSA training (T4.5 B)
+    train_fields: tuple = (0.5, 1.0, 1.5)   # fields of the optimize-under-noise runs
+    weak_noise_max: float = 1e-3        # strengths used in the linear-response slope check
+    slope_tol: float = 0.15             # |slope - 1| allowed in that check
+    monotone_tol: float = 1e-12         # slack in the purity-monotonicity check
 
     def strengths(self) -> np.ndarray:
         """Logarithmically spaced noise strengths, plus the noiseless point 0."""
@@ -267,3 +290,4 @@ if __name__ == "__main__":
     print("ED settings:            ", CFG.ed)
     print("VQE settings:           ", CFG.vqe)
     print("Entanglement settings:  ", CFG.ent)
+    print("Noise settings:         ", CFG.noise)
