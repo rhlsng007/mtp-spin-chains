@@ -1,0 +1,61 @@
+Phase 4: 18 eval files, 0 complete training sets
+== Experiment A: noiseless optimum evaluated under noise ==
+[PASS] zero noise reproduces the Phase 2 states: max |rho - psi psi^+| = 3.8e-15
+[PASS] zero noise reproduces the Phase 2 energies: max diff = 2.3e-13
+[PASS] zero noise reproduces the Phase 2 fidelities F and F_GS: max diff = 1.4e-14
+[PASS] zero noise reproduces the Phase 3 half-chain S and S2: max diff = 4.2e-14
+[PASS] valid density matrices: max |Tr - 1| = 7.1e-15, max Hermiticity error = 6.0e-16, min eigenvalue = -1.0e-15
+[PASS] variational principle Tr(rho H) >= E0 at every point: min eps = 2.93e-07
+[PASS] measurement-group energy equals Tr(rho H): max diff = 7.3e-14
+[PASS] purity decreases monotonically with depolarizing strength: largest increase -1.6e-03, violations 0
+[PASS] purity decreases monotonically with amplitude_damping strength: largest increase -2.8e-05, violations 0
+[PASS] purity decreases monotonically with dephasing strength: largest increase -1.3e-04, violations 0
+[PASS] weak-noise linear response (depolarizing): log-log slopes of 1 - purity and 1 - F_ideal for p <= 0.001: 0.972 to 0.999
+[PASS] weak-noise linear response (amplitude_damping): log-log slopes of 1 - purity and 1 - F_ideal for p <= 0.001: 0.984 to 1.001
+[PASS] weak-noise linear response (dephasing): log-log slopes of 1 - purity and 1 - F_ideal for p <= 0.001: 0.991 to 1.000
+-- mixed-state subtlety (half chain, strongest noise vs zero noise) --
+[PASS] depolarizing: log negativity falls at all 339 entangled points (339)
+[NOTE] depolarizing: mutual information falls at 312 of 339 entangled points (not required: noise inside the circuit is followed by gates that cross the cut and turn it into classical correlations; data processing forbids an increase only for noise after the last such gate)
+[PASS] depolarizing: subsystem entropy S(A) rises at all 339 entangled points (339) although entanglement falls
+[FAIL] amplitude_damping: log negativity falls at all 339 entangled points (325)
+[NOTE] amplitude_damping: mutual information falls at 311 of 339 entangled points (not required: noise inside the circuit is followed by gates that cross the cut and turn it into classical correlations; data processing forbids an increase only for noise after the last such gate)
+[NOTE] amplitude_damping: S(A) rises at 339 of 339 entangled points (not required: non-unital, drives toward |0...0>)
+[FAIL] dephasing: log negativity falls at all 339 entangled points (338)
+[NOTE] dephasing: mutual information falls at 319 of 339 entangled points (not required: noise inside the circuit is followed by gates that cross the cut and turn it into classical correlations; data processing forbids an increase only for noise after the last such gate)
+[NOTE] dephasing: S(A) rises at 339 of 339 entangled points (not required: Z-dephasing leaves Z-diagonal weight unchanged)
+-- finite shots --
+[PASS] shot estimates unbiased: 0.30% of 35640 means beyond 3 sigma (Gaussian: 0.27%)
+[PASS] shot spread matches the analytic variance: median std/sigma = 0.993
+== Experiment B: SPSA training under noise ==
+[NOTE] no complete noisy_train sets found; training checks skipped
+central charge HVA N=8 p=4 h=1.0 (depolarizing): c(0) = 0.692; p = 5e-02: from S 19.309, from I/2 -0.061
+central charge HEA N=8 p=4 h=1.0 (depolarizing): c(0) = 0.539; p = 5e-02: from S 21.689, from I/2 -0.025
+== Key numbers: N = 8, p = N/2, h = h_c ==
+HVA: gates n_1q = 40, n_2q = 28; noiseless eps = 2.61e-03, F_GS = 0.9862, S(A) = 0.3398, E_N = 0.6155
+        depolarizing p=7.9e-04: eps=1.632e-02 1-F_GS=5.561e-02 purity=0.9173 S2(A)=0.2420 I=0.6165 E_N=0.5734
+        depolarizing p=1.3e-02: eps=1.997e-01 1-F_GS=4.972e-01 purity=0.2708 S2(A)=0.8349 I=0.2914 E_N=0.2468
+        depolarizing p=5.0e-02: eps=5.898e-01 1-F_GS=9.172e-01 purity=0.0165 S2(A)=2.1073 I=0.0458 E_N=-0.0000
+        depolarizing: S(A|B) turns positive (hashing bound lost) at p = 3.2e-03
+   amplitude_damping p=7.9e-04: eps=1.119e-02 1-F_GS=3.870e-02 purity=0.9506 S2(A)=0.2236 I=0.6410 E_N=0.5901
+   amplitude_damping p=1.3e-02: eps=1.225e-01 1-F_GS=3.320e-01 purity=0.4871 S2(A)=0.5436 I=0.4137 E_N=0.3619
+   amplitude_damping p=5.0e-02: eps=3.341e-01 1-F_GS=7.372e-01 purity=0.1473 S2(A)=1.1076 I=0.1555 E_N=0.0991
+   amplitude_damping: S(A|B) turns positive (hashing bound lost) at p = 3.2e-03
+           dephasing p=7.9e-04: eps=6.811e-03 1-F_GS=3.240e-02 purity=0.9627 S2(A)=0.2168 I=0.6379 E_N=0.5965
+           dephasing p=1.3e-02: eps=6.731e-02 1-F_GS=2.672e-01 purity=0.5590 S2(A)=0.4689 I=0.4220 E_N=0.3765
+           dephasing p=5.0e-02: eps=2.392e-01 1-F_GS=6.798e-01 purity=0.1282 S2(A)=1.1504 I=0.1885 E_N=0.1037
+           dephasing: S(A|B) turns positive (hashing bound lost) at p = 6.3e-03
+HEA: gates n_1q = 80, n_2q = 28; noiseless eps = 2.51e-04, F_GS = 0.9995, S(A) = 0.3507, E_N = 0.5336
+        depolarizing p=7.9e-04: eps=3.205e-02 1-F_GS=6.432e-02 purity=0.8766 S2(A)=0.3030 I=0.6821 E_N=0.4973
+        depolarizing p=1.3e-02: eps=3.893e-01 1-F_GS=6.422e-01 purity=0.1368 S2(A)=1.4062 I=0.3474 E_N=0.1866
+        depolarizing p=5.0e-02: eps=8.307e-01 1-F_GS=9.741e-01 purity=0.0058 S2(A)=2.6869 I=0.0137 E_N=0.0000
+        depolarizing: S(A|B) turns positive (hashing bound lost) at p = 1.6e-03
+   amplitude_damping p=7.9e-04: eps=1.231e-02 1-F_GS=2.595e-02 purity=0.9499 S2(A)=0.2498 I=0.6943 E_N=0.5204
+   amplitude_damping p=1.3e-02: eps=1.678e-01 1-F_GS=3.280e-01 purity=0.4695 S2(A)=0.6667 I=0.5757 E_N=0.3973
+   amplitude_damping p=5.0e-02: eps=4.539e-01 1-F_GS=7.561e-01 purity=0.1024 S2(A)=1.4265 I=0.2454 E_N=0.1434
+   amplitude_damping: S(A|B) turns positive (hashing bound lost) at p = 6.3e-03
+           dephasing p=7.9e-04: eps=9.214e-03 1-F_GS=2.095e-02 purity=0.9596 S2(A)=0.2418 I=0.6882 E_N=0.5209
+           dephasing p=1.3e-02: eps=1.318e-01 1-F_GS=2.779e-01 purity=0.5262 S2(A)=0.5699 I=0.5709 E_N=0.3910
+           dephasing p=5.0e-02: eps=4.197e-01 1-F_GS=7.184e-01 purity=0.0930 S2(A)=1.4256 I=0.2820 E_N=0.1320
+           dephasing: S(A|B) turns positive (hashing bound lost) at p = 6.3e-03
+
+17 checks passed, 2 failed, 6 notes
