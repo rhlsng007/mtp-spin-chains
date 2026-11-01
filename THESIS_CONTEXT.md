@@ -43,7 +43,7 @@ Scripts are always run from the project root, e.g. `python experiments\phase1_ed
 - Measured noisy-simulation cost (Phase 4): about 0.25 s per N = 8 density-matrix energy evaluation with 12 workers under full load, about 5 times the single-core speed (memory-bandwidth contention and efficiency cores). Budget long noisy runs from this rate. Progress lines appear only when a whole job finishes; check liveness with `Get-Process python | Select-Object Id, CPU`.
 - The Desktop is redirected by OneDrive; use `$HOME\Downloads` in commands.
 
-**Git workflow (settled in Phase 2):** one branch per phase (`phaseN-...`); commit the code before running experiments, so every result records the commit that produced it; merge with `--no-ff`; tag `phaseN-complete`. Tags are lightweight, so push them explicitly (`git push origin <tag>`); `--follow-tags` skips them. Tags so far: `phase1-complete` (6051c9d), `phase2-complete` (0f7015c), `phase3-complete` (9110ea2), `phase4-complete` (<fill: merge hash>).
+**Git workflow (settled in Phase 2):** one branch per phase (`phaseN-...`); commit the code before running experiments, so every result records the commit that produced it; merge with `--no-ff`; tag `phaseN-complete`. Tags are lightweight, so push them explicitly (`git push origin <tag>`); `--follow-tags` skips them. Tags so far: `phase1-complete` (6051c9d), `phase2-complete` (0f7015c), `phase3-complete` (9110ea2), `phase4-complete` (99928f4).
 
 ## 4. Project structure
 
@@ -65,7 +65,8 @@ mtp-spin-chains/
 ├── utils/                 # io.py, seeding.py, plotting.py       (Phase 0, done)
 ├── experiments/           # one script per thesis figure
 ├── scripts/               # check_env.py, phase2_report_data.py, phase3_report_data.py,
-│                          # phase4_diag_negativity.py, phase4_diag_training.py
+│                          # phase4_diag_negativity.py, phase4_diag_training.py,
+│                          # phase4_report_data.py
 ├── tests/                 # test_phase0.py ... test_phase4.py (240 tests)
 ├── results/               # .npz data + .json metadata (gitignored; back up separately)
 └── figures/               # .pdf tracked in git, .png gitignored
@@ -216,8 +217,10 @@ $$
 **Error budget and fidelity collapse (Phase 4):**
 
 $$
-\lambda = p\,(n_{1q} + n_{2q}), \qquad 1 - \langle\psi_0|\rho|\psi_0\rangle \approx 1 - e^{-\kappa\lambda}, \qquad \kappa \approx 0.8\text{–}0.9
+\lambda = p\,(n_{1q} + n_{2q}), \qquad 1 - \langle\psi_0|\rho|\psi_0\rangle \approx 1 - e^{-\kappa\lambda}
 $$
+
+κ is channel-specific (median over all fields, N and p with λ ≤ 1): 0.734 depolarizing (5–95 %: 0.69–0.84), 0.359 amplitude damping (0.02–0.52), 0.318 dephasing (0.05–0.35). For one depolarizing event a product-state qubit loses 2p/3 of fidelity, a pure two-qubit block 4p/5, an entangled qubit up to p.
 
 **Shot-noise variance (Phase 4), M shots in each measurement basis g:**
 
@@ -397,7 +400,7 @@ so ε < ε_prod certifies entanglement. N = 8, open: ε_prod = 3.07e-3 (h = 0.5)
 
 ## 11. Phase 4: completed
 
-**Status:** done; merged into `main` at <fill: merge hash>, tag `phase4-complete`. Code at commit <fill: Phase 4 code commit>; training run on <fill: commit of "negativity diagnostic">; final plot checks at 60e842e. `pytest -q`: 240 tests pass in 47 s (60 for Phase 4, including 6 PennyLane `default.mixed` cross-checks). `experiments\phase4_plots.py`: 21 checks passed, 0 failed, 14 notes. Report: <fill: link to the Phase 4 Claude Doc>. T4.7 (IBM calibration noise through Qiskit) was skipped by decision; a realistic noise model is built in Phase 5 instead.
+**Status:** done; merged into `main` at 99928f4, tag `phase4-complete`. Code at c50fd87 and c0291c3 (two commits with the same message); experiment B run on 77aaf99; negativity checks refined in db34cdd; training diagnostic 60e842e; report-data script 4c9a105; final figures and summary committed just before the merge. `pytest -q`: 240 tests pass in 47 s (60 for Phase 4, including 6 PennyLane `default.mixed` cross-checks). `experiments\phase4_plots.py`: 21 checks passed, 0 failed, 14 notes. Report: the Claude Doc "Phase 4: Noise Robustness of VQE States for the Transverse-Field Ising Chain" (https://claude.ai/artifact/QfeNxKJwW1LT9AygWiE5FT). T4.7 (IBM calibration noise through Qiskit) was skipped by decision; a realistic noise model is built in Phase 5 instead.
 
 **How to run (from the project root, after Phases 1 to 3):**
 
@@ -405,6 +408,7 @@ so ε < ε_prod certifies entanglement. N = 8, open: ε_prod = 3.07e-3 (h = 0.5)
 - `python experiments\phase4_noise.py --experiments train --workers 12` (experiment B, 72 jobs, 21,417 s = 5 h 57 min; HVA N = 8 jobs about 8,100 s, HEA N = 8 jobs about 13,100 s, N = 6 and 4 jobs 17 to 125 s). Cached per file; an unfinished job restarts from zero. Options: `--sizes`, `--ansatze`, `--recompute`.
 - `python experiments\phase4_plots.py` (9 figures in `figures/phase4/` and `results/phase4/phase4_summary.txt`).
 - `python scripts\phase4_diag_negativity.py` (points where E_N rises with noise) and `python scripts\phase4_diag_training.py` (trained states against the product-state bound).
+- `python scripts\phase4_report_data.py` (crossing strengths, κ fits, shot floors, central charges, training crossovers; `results/phase4/phase4_report_data.json`).
 
 **API (for Phase 5 onward):**
 
@@ -438,15 +442,15 @@ so ε < ε_prod certifies entanglement. N = 8, open: ε_prod = 3.07e-3 (h = 0.5)
 **Key results (N = 8, p = N/2, h = h_c unless stated; numbers in `phase4_summary.txt`):**
 
 - Validation: zero noise reproduces the Phase 2 states (3.8e-15), energies (2.3e-13), F and F_GS (1.4e-14) and the Phase 3 half-chain S and S2 (4.2e-14). Density matrices valid to 1e-15; variational principle holds everywhere; purity falls monotonically for all three channels; weak-noise log-log slopes of 1 − purity and 1 − F_ideal are 0.97 to 1.00; shot estimates unbiased (0.30 % beyond 3σ) with spread matching the analytic variance (median ratio 0.993). PennyLane `default.mixed` agrees with the simulator for all channels and both ansätze.
-- The HEA's noiseless accuracy advantage (ε = 2.5e-4 against 2.6e-3) is gone by p ≈ 1e-4 under depolarizing noise (both 4.4e-3) and by p ≈ 4e-4 under amplitude damping and dephasing: 108 noisy gates against 68. Depolarizing at p = 7.9e-4: HVA ε = 1.6e-2, HEA 3.2e-2.
-- Error-budget collapse: the infidelity to the noiseless state of every ansatz, size and depth falls on one curve 1 − exp(−κλ), κ ≈ 0.8 to 0.9. Fidelity loss is set by the gate count, not by the ansatz design.
-- Mixed-state subtlety: under depolarizing noise S(ρ_A) rises at all 339 entangled points while E_N falls at all of them, reaching exactly 0 by p = 0.05 (entanglement sudden death) with S2(A) = 2.1 (HVA) and 2.7 (HEA). Cleanest case: the symmetry-broken HEA at h = 0.5, where S(ρ_A) rises from about 0.04 to 2.6 with E_N ≈ 0 throughout. Hashing bound lost (S(A|B) > 0) at p = 3.2e-3 (HVA) and 1.6e-3 (HEA) under depolarizing noise, both at λ ≈ 0.2; at 3.2e-3 to 6.3e-3 for the other channels.
+- The HEA's noiseless accuracy advantage (ε = 2.5e-4 against 2.6e-3) is gone from p = 1.0e-4 (depolarizing), 3.9e-4 (dephasing) and 5.6e-4 (amplitude damping): 108 noisy gates against 68. Depolarizing at p = 7.9e-4: HVA ε = 1.6e-2, HEA 3.2e-2.
+- Error-budget collapse: the infidelity to the noiseless state of every ansatz, size and depth falls on one curve 1 − exp(−κλ) per channel, κ = 0.73 (depolarizing, tight), 0.36 (amplitude damping), 0.32 (dephasing; both broad and state dependent). Fidelity loss is set by the gate count, not by the ansatz design.
+- Mixed-state subtlety: under depolarizing noise S(ρ_A) rises at all 339 entangled points while E_N falls at all of them, reaching exactly 0 by p = 0.05 (entanglement sudden death) with S2(A) = 2.1 (HVA) and 2.7 (HEA). Cleanest case: the symmetry-broken HEA at h = 0.5, where S(ρ_A) rises from about 0.04 to 2.6 with E_N ≈ 0 throughout. Hashing bound lost (S(A|B) > 0, log-interpolated) at N = 8, p = 4, h = 1: depolarizing 1.7e-3 (HVA, λ = 0.12) and 1.1e-3 (HEA, λ = 0.12); amplitude damping 3.1e-3 / 3.2e-3 (λ = 0.21 / 0.35); dephasing 4.1e-3 / 4.1e-3 (λ = 0.28 / 0.45). Under depolarizing noise λ = 0.06 to 0.12 for every N and p (outlier HEA N = 8, p = 1: 0.017). Sudden death (E_N = 0) at p = 0.05 for HVA N = 8, p = 3, 4 and HEA N = 6, p = 3, N = 8, p = 1, 3, 4.
 - Mutual information is not monotone in noise strength (falls at 311 to 319 of 339 points): noise inside the circuit is followed by gates crossing the cut, which turn it into classical correlations; data processing only covers noise after the last such gate.
 - E_N can rise with noise in near-product states: 14 points (amplitude damping) and 1 (dephasing), all symmetry-broken HEA states in the ordered phase (F = 0.50, F_GS = 1.00, E_N(0) = 0.012 to 0.069), largest 0.015 → 0.129 (HEA N = 6, p = 3, h = 0.3). Mechanism: mid-circuit noise spoils the cancellation by which the optimized circuit undoes its own entanglement. Every state with E_N(0) ≥ 0.1 loses entanglement monotonically.
-- Central charge (secondary, 3-point fits): from S(ℓ) it rises from 0.69 (HVA) and 0.54 (HEA) to about 1 at p = 1e-4 and about 20 at 0.05 (volume-law noise term); from I(ℓ)/2 it stays at the noiseless value up to p ≈ 2e-3, then decays to 0. I/2 is the noise-robust estimator.
-- Shots: at 1,000 shots per basis, a single run's shot-noise floor is ε ≈ 1e-2; noise-induced errors below p ≈ 1e-3 are invisible in one hardware-like run.
-- Energy witness: experiment A states at h = 1 certify entanglement by energy (ε < ε_prod = 0.044) only up to p ≈ 1e-3 (HEA) and 2.5e-3 (HVA) under depolarizing noise, just below where the hashing bound fails (1.6e-3 and 3.2e-3): two independent certificates are lost at about the same error budget.
-- Training under noise: warm starts equal experiment A (median difference 4.1e-6). Under depolarizing noise nothing beats experiment A. Under amplitude damping and dephasing, cold-trained HEA circuits overtake it beyond p ≈ 3e-3 to 6e-3: at p = 0.05, h = 1, amplitude damping ε = 0.049 against 0.454, with purity 0.95 (against 0.13), E_N = 0.03, S_A = 0.04, just above ε_prod = 0.044. The trained circuits retreat to a nearly pure, nearly unentangled state near the best product state. The HVA gains less (amplitude damping, h = 1: 0.33 → 0.19, purity 0.33) and nothing under dephasing: its RX rotations cannot steer the damping fixed point |0⟩ toward X, and its |+⟩ start lies where Z-dephasing hurts most.
+- Central charge (secondary, 3-point fits, depolarizing): from S(ℓ) it rises from 0.692 (HVA) and 0.539 (HEA) to 0.86 / 0.93 at p = 1e-4 and 19.3 / 21.7 at 0.05 (volume-law noise term). From I(ℓ)/2 the HEA stays within 2 % (0.530) up to p = 1.6e-3; the HVA drifts to 0.512 (−26 %) by then; both reach 0 beyond p ≈ 2e-2. I/2 is the noise-robust estimator.
+- Shots: single-run shot-noise floor σ/|E0| = 1.1e-2, 5.0e-3, 3.5e-3 at 1,000, 5,000, 10,000 shots per basis (1/√M, both ansätze); noise-induced errors below p ≈ 1e-3 are invisible in one 1,000-shot run.
+- Energy witness (ε < ε_prod) lost at N = 8, p = 4, h = 1: depolarizing 2.3e-3 (HVA, λ = 0.16) and 1.0e-3 (HEA, λ = 0.11); amplitude damping 3.8e-3 / 2.9e-3; dephasing 7.6e-3 / 3.8e-3. Same error budget as the hashing bound: two independent certificates fail at λ ≈ 0.1 to 0.5. In the ordered phase (h = 0.5) the HVA never certifies by energy (noiseless ε = 0.045 > ε_prod = 0.003).
+- Training under noise: warm starts equal experiment A (median difference at most 2e-4 per problem). Under depolarizing noise cold training only meets experiment A where both are poor (HEA h = 1, p = 0.05: 0.820 against 0.831). Under amplitude damping and dephasing, cold-trained HEA circuits overtake it beyond p ≈ 3e-3 to 9e-3 (N = 8): at p = 0.05, h = 1, amplitude damping ε = 0.049 against 0.454, with purity 0.95 (against 0.13), E_N = 0.03, S_A = 0.04, just above ε_prod = 0.044. The trained circuits retreat to a nearly pure, nearly unentangled state near the best product state. The HVA gains less (amplitude damping, h = 1: 0.33 → 0.19, purity 0.33) and nothing under dephasing: its RX rotations cannot steer the damping fixed point |0⟩ toward X, and its |+⟩ start lies where Z-dephasing hurts most.
 - Lower energy under noise comes from abandoning entanglement: the noise-trained HEA at h = 1 has 10 times lower ε than experiment A but E_N = 0.03 against a noiseless 0.54. Energy error is a misleading benchmark for noisy many-body VQE.
 - Cold-SPSA floors at zero noise: HVA 0.144, 0.036, 0.009 and HEA 0.045, 0.042, 0.057 (h = 0.5, 1.0, 1.5). The HEA floor sits at the product-state bound, so cold SPSA from small angles barely leaves the product manifold even without noise; the training crossover partly reflects that near-product states are found anyway and happen to be robust.
 
