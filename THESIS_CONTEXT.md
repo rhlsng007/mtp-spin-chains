@@ -44,7 +44,7 @@ Scripts are always run from the project root, e.g. `python experiments\phase1_ed
 - Phase 5 ZNE run (72 jobs, 12 workers): 1,932 s; the longest jobs are HEA N = 8, p = 4 (1,200 to 1,370 s each), so the wall time is set by the N = 8 jobs.
 - The Desktop is redirected by OneDrive; use `$HOME\Downloads` in commands.
 
-**Git workflow (settled in Phase 2):** one branch per phase (`phaseN-...`); commit the code before running experiments, so every result records the commit that produced it; merge with `--no-ff`; tag `phaseN-complete`. Tags are lightweight, so push them explicitly (`git push origin <tag>`); `--follow-tags` skips them. Tags so far: `phase1-complete` (6051c9d), `phase2-complete` (0f7015c), `phase3-complete` (9110ea2), `phase4-complete` (99928f4), `phase5-complete` (<P5_MERGE>).
+**Git workflow (settled in Phase 2):** one branch per phase (`phaseN-...`); commit the code before running experiments, so every result records the commit that produced it; merge with `--no-ff`; tag `phaseN-complete`. Tags are lightweight, so push them explicitly (`git push origin <tag>`); `--follow-tags` skips them. Tags so far: `phase1-complete` (6051c9d), `phase2-complete` (0f7015c), `phase3-complete` (9110ea2), `phase4-complete` (99928f4), `phase5-complete` (06622d4).
 
 ## 4. Project structure
 
@@ -497,7 +497,7 @@ $$
 
 ## 12. Phase 5: completed
 
-**Status:** done; merged into `main` at <P5_MERGE>, tag `phase5-complete`. Results produced at commit <P5_CODE>; folding-bias check and report-data refinements in <P5_CHECK>. `pytest -q`: 311 tests pass (83 for Phase 5, including the PennyLane extrapolator cross-check). `experiments\phase5_plots.py`: 27 checks passed, 0 failed, 7 notes. Report: the Claude Doc "Phase 5: Error Mitigation of Noisy VQE States for the Transverse-Field Ising Chain" (https://claude.ai/artifact/TrgXg2ap3k1FubLRHScbJg).
+**Status:** done; merged into `main` at 06622d4, tag `phase5-complete`. Results produced at commit 36a8c0d; folding-bias check and report-data refinements in 402a486; final figures and summary in 7dd63da. `pytest -q`: 311 tests pass (83 for Phase 5, including the PennyLane extrapolator cross-check). `experiments\phase5_plots.py`: 27 checks passed, 0 failed, 7 notes. Report: the Claude Doc "Phase 5: Error Mitigation of Noisy VQE States for the Transverse-Field Ising Chain" (https://claude.ai/artifact/TrgXg2ap3k1FubLRHScbJg).
 
 **How to run (from the project root, after Phases 1 to 4):**
 
