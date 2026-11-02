@@ -41,9 +41,10 @@ Scripts are always run from the project root, e.g. `python experiments\phase1_ed
 - Sleep is disabled on mains power (`powercfg /change standby-timeout-ac 0`); Modern Standby otherwise pauses all workers. Check for pauses with Kernel-Power events 506/507.
 - Screen-off also triggers Modern Standby (found in Phase 4: a 30-minute screen timeout caused a 7-minute pause). For long runs set `powercfg /change monitor-timeout-ac 0` and the lid action on mains to "do nothing" (`powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0`, then `powercfg /setactive SCHEME_CURRENT`); restore the screen timeout afterwards.
 - Measured noisy-simulation cost (Phase 4): about 0.25 s per N = 8 density-matrix energy evaluation with 12 workers under full load, about 5 times the single-core speed (memory-bandwidth contention and efficiency cores). Budget long noisy runs from this rate. Progress lines appear only when a whole job finishes; check liveness with `Get-Process python | Select-Object Id, CPU`.
+- Phase 5 ZNE run (72 jobs, 12 workers): 1,932 s; the longest jobs are HEA N = 8, p = 4 (1,200 to 1,370 s each), so the wall time is set by the N = 8 jobs.
 - The Desktop is redirected by OneDrive; use `$HOME\Downloads` in commands.
 
-**Git workflow (settled in Phase 2):** one branch per phase (`phaseN-...`); commit the code before running experiments, so every result records the commit that produced it; merge with `--no-ff`; tag `phaseN-complete`. Tags are lightweight, so push them explicitly (`git push origin <tag>`); `--follow-tags` skips them. Tags so far: `phase1-complete` (6051c9d), `phase2-complete` (0f7015c), `phase3-complete` (9110ea2), `phase4-complete` (99928f4).
+**Git workflow (settled in Phase 2):** one branch per phase (`phaseN-...`); commit the code before running experiments, so every result records the commit that produced it; merge with `--no-ff`; tag `phaseN-complete`. Tags are lightweight, so push them explicitly (`git push origin <tag>`); `--follow-tags` skips them. Tags so far: `phase1-complete` (6051c9d), `phase2-complete` (0f7015c), `phase3-complete` (9110ea2), `phase4-complete` (99928f4), `phase5-complete` (<P5_MERGE>).
 
 ## 4. Project structure
 
@@ -60,19 +61,19 @@ mtp-spin-chains/
 │                          # spsa.py                              (Phase 4, done)
 ├── noise/                 # channels.py, density.py, shots.py,
 │                          # data.py, evaluate.py                 (Phase 4, done)
-│                          # mitigation.py                        (Phase 5)
+│                          # mitigation.py                        (Phase 5, done)
 ├── ml/                    # dataset.py, classifiers.py           (Phase 6, 7)
 ├── utils/                 # io.py, seeding.py, plotting.py       (Phase 0, done)
 ├── experiments/           # one script per thesis figure
 ├── scripts/               # check_env.py, phase2_report_data.py, phase3_report_data.py,
 │                          # phase4_diag_negativity.py, phase4_diag_training.py,
-│                          # phase4_report_data.py
-├── tests/                 # test_phase0.py ... test_phase4.py (240 tests)
+│                          # phase4_report_data.py, phase5_report_data.py
+├── tests/                 # test_phase0.py ... test_phase5.py (311 tests)
 ├── results/               # .npz data + .json metadata (gitignored; back up separately)
 └── figures/               # .pdf tracked in git, .png gitignored
 ```
 
-`results/` is gitignored, so all result data exist only locally. Keep a backup zip of `results\phase1` to `results\phase4` outside the repo; regenerating Phase 2 takes about 3 hours, Phase 3 about 6 minutes, Phase 4 about 6 hours (experiment A alone 3 minutes).
+`results/` is gitignored, so all result data exist only locally. Keep a backup zip of `results\phase1` to `results\phase5` outside the repo; regenerating Phase 2 takes about 3 hours, Phase 3 about 6 minutes, Phase 4 about 6 hours (experiment A alone 3 minutes), Phase 5 about 33 minutes.
 
 ## 5. Existing utilities (Phase 0)
 
@@ -83,7 +84,7 @@ mtp-spin-chains/
 - `CFG.cluster.h1_grid()`: 0 to 1.6, step 0.1; `CFG.cluster.h2_values = (-1.0, 0.0, 1.0)`.
 - `CFG.system.sizes_exact = (4, 6, 8, 10, 12, 14)`, `sizes_noiseless = (4, ..., 12)`, `sizes_noisy = (4, 6, 8)`, `CFG.system.depths(N, noisy)` (1..N noiseless, 1..N/2 noisy).
 - `CFG.ed` (added in Phase 1): `k_per_sector=3`, `dense_max_dim=512`, `eigsh_tol=0` (machine precision), `degeneracy_tol=1e-9`, `eigsh_seed=0`, `save_states=True`, `cc_ell_min=2`, `cc_boundaries=("open","periodic")`, `xxz_cc_deltas=(0.0, 0.5)`. `CFG.cluster.boundary = "open"` was also added.
-- `CFG.vqe` (extended in Phases 2 and 4, see Sections 9 and 11), `CFG.ent` (added in Phase 3, see Section 10), `CFG.noise` (extended in Phase 4, see Section 11; `CFG.noise.strengths()` gives 0 plus 10 log-spaced values from 1e-4 to 5e-2), `CFG.ml`, `CFG.seeds.seeds(noisy)` (master seed 2026; `n_seeds_noisy = 3`).
+- `CFG.vqe` (extended in Phases 2 and 4, see Sections 9 and 11), `CFG.ent` (added in Phase 3, see Section 10), `CFG.noise` (extended in Phase 4, see Section 11; `CFG.noise.strengths()` gives 0 plus 10 log-spaced values from 1e-4 to 5e-2), `CFG.mitigation` (added in Phase 5, see Section 12; `CFG.mitigation.strengths()` gives 0 plus 10 log-spaced values from 1e-5 to 1e-2), `CFG.ml`, `CFG.seeds.seeds(noisy)` (master seed 2026; `n_seeds_noisy = 3`).
 - Paths: `RESULTS_DIR`, `FIGURES_DIR`. Helper `make_grid(start, stop, step)` avoids floating-point drift.
 
 **`utils/io.py`:** `save_results(name, arrays, params, subdir)`, `load_results(name, subdir)`, `result_exists(...)`, `load_or_compute(name, compute_fn, params, subdir, recompute=False)`. Metadata JSON stores params, full config, timestamp, git commit, package versions.
@@ -242,6 +243,38 @@ $$
 
 so ε < ε_prod certifies entanglement. N = 8, open: ε_prod = 3.07e-3 (h = 0.5), 4.43e-2 (h = 1.0), 7.17e-2 (h = 1.5).
 
+**Readout model and correction (Phase 5):** independent asymmetric flips, p01 = P(1|0), p10 = P(0|1); calibration X gates are noisy, f = P(|1⟩ after the noisy X):
+
+$$
+q = \left(R_0 \otimes \cdots \otimes R_{N-1}\right) p, \qquad R_q = \begin{pmatrix} 1-p_{01} & p_{10} \\ p_{01} & 1-p_{10} \end{pmatrix}, \qquad A_{\text{cal}} = \bigotimes_q R_q \begin{pmatrix} 1 & 1-f \\ 0 & f \end{pmatrix}
+$$
+
+$$
+\hat{E} = c + \sum_g w_g \cdot q_g, \qquad w_g = A_{\text{cal}}^{-T} v_g
+$$
+
+**Unitary folding and extrapolation (Phase 5):** noise follows inverse gates too, so noisy gate counts scale exactly by λ:
+
+$$
+U \to U\,(U^\dagger U)^k \ \text{(global)}, \qquad G \to G\,(G^\dagger G)^k \ \text{(local)}, \qquad \lambda = 2k+1 \in \{1, 3, 5\}
+$$
+
+$$
+E^{*}_{\text{R}} = \tfrac{15}{8}E(1) - \tfrac{5}{4}E(3) + \tfrac{3}{8}E(5), \qquad \operatorname{Var}(\hat{E}^{*}) = \sum_k c_k^2 \operatorname{Var}\big(\hat{E}(\lambda_k)\big), \qquad \sum_k c_k^2 = \tfrac{167}{32}\ \text{(Richardson)},\ \tfrac{35}{24}\ \text{(linear)}
+$$
+
+**Folding bias (Phase 5):** with A (B) the first-order effect of errors placed after (before) each gate,
+
+$$
+E(\lambda) - E_{\text{ideal}} = p\left[\frac{A-B}{2} + \lambda\,\frac{A+B}{2}\right] + O(p^2)
+$$
+
+A = B for depolarizing noise (commutes with the gates). For amplitude damping and dephasing the sum telescopes along each qubit (trivial on |0⟩ before the first gate), so ZNE converges to the circuit followed by half a final noise layer:
+
+$$
+E_{\text{ZNE}} - E_{\text{ideal}} = \frac{1}{2}\left[\operatorname{Tr}\!\big(H\,\mathcal{N}_p^{\otimes N}(\rho_{\text{ideal}})\big) - E_{\text{ideal}}\right] + O(p^2)
+$$
+
 ## 7. Full implementation plan
 
 | Phase | Content | Status |
@@ -251,8 +284,8 @@ so ε < ε_prod certifies entanglement. N = 8, open: ε_prod = 3.07e-3 (h = 0.5)
 | 2 | Noiseless VQE: HVA and HEA, warm start, random restarts, barren plateaus | **Done** |
 | 3 | Entanglement of VQE states, central-charge extraction vs depth | **Done** |
 | 4 | Noisy density-matrix simulation (N = 4–8), shots, SPSA, noise sweeps | **Done** |
-| 5 | Error mitigation: readout correction, ZNE with gate folding | **Next** |
-| 6 | ML datasets: correlators, classical shadows, clean and noisy | |
+| 5 | Error mitigation: readout correction, ZNE with gate folding | **Done** |
+| 6 | ML datasets: correlators, classical shadows, clean and noisy | **Next** |
 | 7 | ML: logistic regression, MLP, PCA, optional QCNN, cross-noise tests | |
 | 8 | Figures, reproducibility, writing | |
 
@@ -354,6 +387,7 @@ so ε < ε_prod certifies entanglement. N = 8, open: ε_prod = 3.07e-3 (h = 0.5)
 - [ ] Check the 14 references of the Phase 2 report before submission.
 - [ ] Check the 9 references of the Phase 3 report before submission.
 - [ ] Check the references of the Phase 4 report before submission.
+- [ ] Check the 12 references of the Phase 5 report before submission, and search the literature for the half-final-layer form of the folding bias before claiming it as new.
 
 ## 10. Phase 3: completed
 
@@ -460,3 +494,61 @@ so ε < ε_prod certifies entanglement. N = 8, open: ε_prod = 3.07e-3 (h = 0.5)
 - Phase 5 mitigation runs should be experiment-A style (fixed parameters evaluated under noise: minutes) rather than SPSA training (hours). The error-budget collapse (fidelity about exp(−κλ)) supports exponential extrapolation in ZNE, since gate folding scales λ directly.
 - Phases 6 and 7 classify phases from correlators and shadows, not energies, since noise-aware optima can have good energies without the physics.
 - Report the 0.1 negativity threshold, the mutual-information non-monotonicity and the HEA near-product mechanism as findings, with the diagnostics as evidence.
+
+## 12. Phase 5: completed
+
+**Status:** done; merged into `main` at <P5_MERGE>, tag `phase5-complete`. Results produced at commit <P5_CODE>; folding-bias check and report-data refinements in <P5_CHECK>. `pytest -q`: 311 tests pass (83 for Phase 5, including the PennyLane extrapolator cross-check). `experiments\phase5_plots.py`: 27 checks passed, 0 failed, 7 notes. Report: the Claude Doc "Phase 5: Error Mitigation of Noisy VQE States for the Transverse-Field Ising Chain" (https://claude.ai/artifact/TrgXg2ap3k1FubLRHScbJg).
+
+**How to run (from the project root, after Phases 1 to 4):**
+
+- `python experiments\phase5_mitigation.py --experiments readout` (6 files, seconds).
+- `python experiments\phase5_mitigation.py --experiments zne --workers 12` (72 files, 1,932 s). Cached per file. Options: `--sizes`, `--ansatze`, `--channels`, `--depths`, `--recompute`.
+- `python experiments\phase5_plots.py` (6 figures in `figures/phase5/`, 27 checks, `results/phase5/phase5_summary.txt`; about 1 minute because check C12 runs live N = 8 simulations).
+- `python scripts\phase5_report_data.py` (`results/phase5/phase5_report_data.json`).
+
+**API (`noise.mitigation`, for Phase 6 onward):**
+
+- Noise: `PHASE5_CHANNELS = ("realistic", "depolarizing", "amplitude_damping", "dephasing")`; `make_mitigation_noise_model(channel, strength)` (Phase 5 settings; "realistic" = depolarizing p and 10p plus amplitude damping and dephasing p on every touched qubit; virtual RZ); `error_budget(channel, strength, n_1q, n_2q)`.
+- Folding: `inverse_gate`, `fold_gates(gates, scale, method)` (`FOLDINGS = ("global", "local")`, odd scales only), `folded_gate_sequence(ansatz, N, p, theta, scale, method)`, `noisy_gate_counts(gates, noise_model)`, `simulate_gates(gates, N, noise_model)`, `simulate_folded(ansatz, N, p, theta, noise_model, scale, method)`.
+- Readout: `ReadoutModel(p01, p10)` with `.uniform`, `.from_config(N)`, `.matrices()`, `.matrix()`; `kron_all`, `apply_local_matrices(vecs, mats)` (tensor product without forming it); `prepared_one_probability(noise_model)`; `calibration_matrices(readout, noise_model)` (per-qubit C_q = R_q P_q), `full_calibration_exact`; `sample_full_calibration(A, shots, rng, R)`, `sample_tensored_calibration(C, shots, rng, R)`; `inverse_transpose`, `correct_probabilities(q, A, method, local_mats)` ("inverse" or "projected"), `project_to_simplex`, `total_variation`, `negative_mass`.
+- `ReadoutEnergy(terms, N, readout)`: `.ideal_probabilities(rho)` (G, 2^N), `.measured_probabilities(p)`, `.energy(probs, weights)`, `.weights_full(A)`, `.weights_from_inverse_T(invT)`, `.weights_tensored(mats)`, `.mixed_state_energy(weights, readout)` (exponential asymptote), `.shot_variance(probs, shots, weights)`, `.sample_counts(probs, shots, rng, R)`, `.energy_from_counts(counts, shots, weights)` (weights may be per repetition).
+- Extrapolation: `EXTRAPOLATORS = ("linear", "richardson", "exponential")`; `extrapolate(scales, values, method, axis, asymptote)` (exponential returns NaN where E − E∞ changes sign); `richardson_coefficients`, `linear_coefficients`, `polynomial_coefficients`, `linear_two_point`, `extrapolation_coefficients`, `extrapolation_variance`, `variance_amplification`.
+- Plot helpers reused by `scripts\phase5_report_data.py`: `experiments.phase5_plots.estimates(d)`, `deltas(d)`, `shot_estimates(d)`, `shot_rms(d)`, `available_zne()`, `zne_data(a, N, p, c)`.
+
+**`CFG.mitigation` (added in Phase 5):** `channels=("realistic","depolarizing","amplitude_damping","dephasing")`, `two_qubit_factor=10.0`, `noisy_rz=False`, `realistic_damping_ratio=1.0`, `realistic_dephasing_ratio=1.0`, `p_min=1e-5`, `p_max=1e-2`, `n_points=10`, `readout_p01=0.01`, `readout_p10=0.02`, `calibration_shots=10000`, `calibration_gate_noise=True`, `foldings=("global","local")`, `main_folding="global"`, `extrapolators=("linear","richardson","exponential")`, `main_extrapolator="richardson"`, `shots=10000`, `shot_repetitions=50`, `readout_field=1.0`, `readout_cal_shots=(1000,10000,100000)`, `plot_size=8`, `plot_field=1.0`, `plot_strength=1e-3`, `plot_strengths_curves=(1e-4,1e-3,4.64159e-3)`, tolerances `weak_fold_tol=0.02`, `order_tol=0.15`, `regime_lambda=0.2`, `variance_ratio_tol=0.1`, `exact_tol=1e-10`. ZNE scale factors come from `CFG.noise.zne_scale_factors = (1, 3, 5)`. `CFG.noise` (Phase 4) is unchanged.
+
+**Conventions fixed in Phase 5:**
+
+- Error measure δ = |E − E_ideal| / |E0|, with E_ideal the noiseless circuit energy (the most mitigation can recover); "at VQE accuracy" means δ below the noiseless VQE error.
+- Error budget: λ = p(n_1q + 10 n_2q) for depolarizing and realistic noise, λ = p(n_1q + 2 n_2q) for amplitude damping and dephasing; N = 8, p = 4: n_1q = 40, n_2q = 28, λ = 320p (realistic).
+- Inverse gates keep the gate name, so they get the same noise (virtual RZ stays noiseless). Idle qubits and basis rotations are noiseless; readout is uncorrelated.
+- Calibration X gates carry gate noise (SPAM); qubits prepared in 0 receive no gate. Calibration streams depend on N only and are redrawn per (channel, strength) with common random numbers; each of the 50 shot repetitions has its own calibration.
+- Energies use the linear readout inverse (unbiased); simplex projection is reported only for distributions.
+- The exponential asymptote is the energy of I/2^N measured through the same pipeline (raw, corrected or ideal).
+- Seeds: `SeedSequence([2026, 13, ...])` (ZNE: measurement `[13, akey, N, p, field]`, calibration `[13, 0, N]`), `([2026, 14, ...])` (readout).
+
+**Saved files in `results/phase5/`:**
+
+- `zne_{hva|hea}_N{N}_p{p}_{channel}` (72): `E_true`, `E_raw`, `E_ro`, `fidelity_ideal` [11 strengths, 20 fields, 2 foldings, 3 scales]; `Es_raw`, `Es_ro`, `Es_tens` [11, 20, 3, 50] (global folding); `var_raw`, `var_ro` [11, 20, 3]; `asym_true`, `asym_raw` [20], `asym_ro` [11, 20], `calib_f` [11]; `h`, `strengths`, `scales`, `foldings`, `channel`, `E0`, `phase2_energy`, `E_ideal`, `n_1q`, `n_2q`, `n_qubits`, `depth`, `shots`, `calibration_shots`, `repetitions`, `readout_p01`, `readout_p10`, `seconds`.
+- `readout_{hva|hea}_N{N}` (6): `tvd`, `neg_mass` [2 sources (exact, shots), 3 calibration shots, 5 methods, 50, 2 groups], `dE` [2, 3, 5, 50]; `A_true`, `C_true`, `E_ideal`, `E0`, `E_raw_exact`, `E_full_exact`, `E_tens_exact`, `tvd_raw_exact`, `tvd_full_exact`, `cal_shots`, `methods`, `sources`.
+- `phase5_summary.txt`, `phase5_report_data.json`.
+
+**Key results (N = 8, p = 4, h = 1, realistic noise unless stated):**
+
+- Readout error alone biases the energy by 3.3 % (up to 5.7 % over all points); exact calibration removes it to 1e-14. ZNE alone stays at this bias (folding does not scale measurement error).
+- At p = 1e-4: unmitigated 4.3e-2 (HVA) / 4.7e-2 (HEA), readout-corrected 1.1e-2 / 1.5e-2, readout + Richardson ZNE 2.0e-5 / 2.0e-5 (exact limit). Readout + ZNE stays at VQE accuracy up to p = 9.6e-4 (HVA, λ = 0.31) and 3.5e-4 (HEA, λ = 0.11); readout correction alone up to 2.4e-5 (HVA) and never (HEA). Extrapolation fails beyond λ ≈ 0.7 (p ≥ 2e-3); at p = 1e-2 the combined error is 0.45 / 0.56.
+- Linear extrapolation is one to two orders worse than Richardson; exponential is comparable at weak noise and degrades more gracefully under depolarizing noise (HVA, p = 1e-2: 0.12 against 0.37).
+- Depolarizing: folding scales the first-order error exactly; weak-noise orders 1.000, 1.998, 2.998 (unmitigated, linear, Richardson); exponential order 2. A small second-order term survives folding, so single three-point Richardson slopes scatter (65 % within ±0.3 of 3).
+- Folding bias (median of Richardson residual / unmitigated error, p = 1e-5): amplitude damping 9.1 % (5 to 95 %: 0.05 to 19 %), dephasing 5.2 %, realistic 1.1 %, depolarizing 5e-7. The half-final-layer identity holds to 7.4e-5 in 36 live cases (both ansätze, N = 4, 6, 8, both foldings). Local and global folding agree (residual ratio median 1.00, 5 to 95 %: 0.97 to 1.24).
+- SPAM from noisy calibration (ratio of combined residual to ideal-calibration residual, p = 1e-5, HVA / HEA): depolarizing 4,300 / 590 (SPAM is the whole residual), realistic 0.35 / 0.39, amplitude damping 0.05 / 0.06 (SPAM cancels most of the folding bias; mechanism not derived), dephasing 1.0 (no SPAM).
+- 250 of 14,400 combined energies fall below E0 (not variational): 249 HEA, all λ ≤ 1, none under dephasing; most negative −0.8 % (amplitude damping), −0.18 % (realistic), −0.10 % (depolarizing).
+- Shots (10,000 per basis): single-run floor σ/|E0| = 3.6e-3; readout-corrected about 3.8e-3; readout + Richardson 0.8 to 1.0e-2 (factor 2.2 to 2.6, predicted 2.28). The combined RMS is flat near 1e-2 from p = 1e-5 to 1e-3 (shot-limited). ZNE beats readout correction alone only above p = 1e-4 (realistic, depolarizing), 1e-3 (amplitude damping), 2.2e-3 (dephasing). No method reaches VQE accuracy at 10,000 shots; readout + ZNE needs about 9.5e4 (HVA) and 1.0e7 (HEA) shots per basis and scale factor.
+- Readout calibration: TVD 3.8e-2 (Z) / 8.3e-2 (X) uncorrected; after correction ∝ M_cal^(−1/2) (1.2e-2, 3.9e-3, 1.2e-3 at 1e3, 1e4, 1e5 shots per circuit); tensored (2 circuits) equals full (256). Projection removes negative probabilities but raises the energy error by 10 to 30 %.
+- Mitigation works in the same window (λ ≈ 0.1 to 0.3) in which Phase 4 found the energy witness and the hashing bound still holding (λ ≈ 0.1 to 0.5).
+
+**Decisions taken at the end of Phase 5:**
+
+- Phase 6 noisy datasets use the Phase 5 realistic model (two-qubit factor 10, virtual RZ) with readout error, and provide a readout-corrected variant (tensored calibration, linear inverse). The Phase 4 one-parameter channels stay available for channel-dependence studies.
+- ZNE is not applied to the Phase 6 datasets by default: at 1,000 to 10,000 shots it adds more variance than it removes bias below p ≈ 1e-4. A ZNE-mitigated dataset is generated only in the λ ≈ 0.05 to 0.3 window, to test whether mitigation restores classification accuracy.
+- Phases 6 and 7 classify from correlators and classical shadows, not energies (confirmed: mitigated energies are not variational and are shot-limited).
+- Report the half-final-layer folding bias as a finding, subject to the literature check in the open items; report the amplitude-damping SPAM cancellation as an observation only.
