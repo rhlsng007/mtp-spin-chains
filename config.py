@@ -226,6 +226,69 @@ class NoiseConfig:
 
 
 # ---------------------------------------------------------------------------
+# Error mitigation (Phase 5)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class MitigationConfig:
+    """
+    Phase 5 settings. The Phase 4 fields in NoiseConfig are left untouched so the
+    Phase 4 results stay reproducible; Phase 5 uses its own hardware-like model
+    (decided at the end of Phase 4): two-qubit error 10 times the one-qubit
+    error, virtual (noiseless) RZ, and readout error. The ZNE scale factors are
+    CFG.noise.zne_scale_factors = (1, 3, 5).
+    """
+    # Gate noise. "realistic" = depolarizing p (1q) and two_qubit_factor * p (2q),
+    # plus amplitude damping and dephasing with gamma = ratio * p on every qubit a
+    # gate touches. The other three channels are the Phase 4 one-parameter models
+    # with the Phase 5 two-qubit factor and virtual RZ.
+    channels: tuple = ("realistic", "depolarizing", "amplitude_damping", "dephasing")
+    two_qubit_factor: float = 10.0
+    noisy_rz: bool = False
+    realistic_damping_ratio: float = 1.0
+    realistic_dephasing_ratio: float = 1.0
+    p_min: float = 1e-5                 # strength grid: 0 plus n_points log-spaced values
+    p_max: float = 1e-2
+    n_points: int = 10
+
+    # Readout error (T5.1): independent, asymmetric bit flips at measurement
+    readout_p01: float = 0.01           # P(read 1 | qubit in 0)
+    readout_p10: float = 0.02           # P(read 0 | qubit in 1), larger: T1 decay during readout
+    calibration_shots: int = 10000      # shots per calibration circuit
+    calibration_gate_noise: bool = True # calibration X gates carry the 1q gate noise (SPAM)
+
+    # Zero-noise extrapolation (T5.2)
+    foldings: tuple = ("global", "local")
+    main_folding: str = "global"        # folding used for the finite-shot statistics
+    extrapolators: tuple = ("linear", "richardson", "exponential")
+    main_extrapolator: str = "richardson"
+
+    # Finite-shot statistics (T5.3)
+    shots: int = 10000                  # shots per measurement basis and per scale factor
+    shot_repetitions: int = 50          # independent repetitions (each with its own calibration)
+
+    # Readout experiment (T5.1)
+    readout_field: float = 1.0
+    readout_cal_shots: tuple = (1000, 10000, 100000)
+
+    # Figures
+    plot_size: int = 8
+    plot_field: float = 1.0
+    plot_strength: float = 1e-3         # strength of the field-sweep figure (on the grid)
+    plot_strengths_curves: tuple = (1e-4, 1e-3, 4.64159e-3)   # E-versus-scale panels
+
+    # Validation tolerances
+    weak_fold_tol: float = 0.02         # |ratio - scale| / scale at the weakest noise (depolarizing)
+    order_tol: float = 0.15             # |log-log slope - expected order|
+    regime_lambda: float = 0.2          # error budget below which mitigation must help everywhere
+    variance_ratio_tol: float = 0.1     # |median empirical / predicted variance - 1|
+    exact_tol: float = 1e-10            # exact-limit identities
+
+    def strengths(self) -> np.ndarray:
+        grid = np.logspace(np.log10(self.p_min), np.log10(self.p_max), self.n_points)
+        return np.concatenate(([0.0], np.round(grid, 10)))
+
+
+# ---------------------------------------------------------------------------
 # Machine learning
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -267,6 +330,7 @@ class Config:
     vqe: VQEConfig = field(default_factory=VQEConfig)
     ent: EntanglementConfig = field(default_factory=EntanglementConfig)
     noise: NoiseConfig = field(default_factory=NoiseConfig)
+    mitigation: MitigationConfig = field(default_factory=MitigationConfig)
     ml: MLConfig = field(default_factory=MLConfig)
     seeds: SeedConfig = field(default_factory=SeedConfig)
 
@@ -291,3 +355,5 @@ if __name__ == "__main__":
     print("VQE settings:           ", CFG.vqe)
     print("Entanglement settings:  ", CFG.ent)
     print("Noise settings:         ", CFG.noise)
+    print("Mitigation settings:    ", CFG.mitigation)
+    print("Mitigation strengths:   ", CFG.mitigation.strengths())
