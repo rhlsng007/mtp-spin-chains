@@ -42,17 +42,22 @@ REPORT_STRENGTHS = (1e-4, 1e-3)
 
 
 def last_below(s, y, thr):
-    """Largest strength (log-interpolated) before y first exceeds thr; None if never below."""
+    """
+    Largest strength (log-interpolated) before y first exceeds thr, with a status:
+    "crossed", "never_below" (already above thr at the weakest strength), or
+    "beyond_grid" (below thr up to the strongest strength; p is then a lower bound).
+    """
     s, y = np.asarray(s, float), np.asarray(y, float)
     if not np.isfinite(y[0]) or y[0] >= thr:
-        return None
+        return {"p": None, "status": "never_below"}
     for i in range(1, len(s)):
         if not np.isfinite(y[i]) or y[i] >= thr:
             if not np.isfinite(y[i]) or y[i] <= 0 or y[i - 1] <= 0:
-                return float(s[i - 1])
+                return {"p": float(s[i - 1]), "status": "crossed"}
             t = (np.log(thr) - np.log(y[i - 1])) / (np.log(y[i]) - np.log(y[i - 1]))
-            return float(np.exp(np.log(s[i - 1]) + t * (np.log(s[i]) - np.log(s[i - 1]))))
-    return float(s[-1])
+            return {"p": float(np.exp(np.log(s[i - 1]) + t * (np.log(s[i]) - np.log(s[i - 1])))),
+                    "status": "crossed"}
+    return {"p": float(s[-1]), "status": "beyond_grid"}
 
 
 def first_better(s, a, b):
@@ -94,6 +99,12 @@ def reference_point(out):
             entry["recovery_strength_shots"] = {m: last_below(s[nz], rms[m][nz, f], eps_vqe)
                                                 for m in ("unmitigated", "readout", "combined")}
             entry["shot_crossover_zne_pays"] = first_better(s[nz], rms["combined"][nz, f], rms["readout"][nz, f])
+            # shots per basis and scale factor needed for readout + ZNE to reach the noiseless VQE
+            # error at the weakest noise, where the RMS error is shot-noise dominated (RMS ~ 1/sqrt(M))
+            M = int(d["shots"])
+            entry["shots_needed_for_vqe_accuracy"] = {
+                m: float(M * (rms[m][1, f] / eps_vqe) ** 2) for m in ("readout", "combined")}
+            entry["shot_floor_single_run"] = float(np.sqrt(d["var_raw"][1, f, 0]) / abs(d["E0"][f]))
             entry["weakest_noise"] = {
                 "p": float(s[1]),
                 "folding_bias_ratio": float(dl["idealcal_richardson"][1, f] / dl["gate_only"][1, f]),
@@ -125,7 +136,7 @@ def misc(out):
     ex = MCFG.main_extrapolator
     sc = CFG.noise.zne_scale_factors
     out["variance_amplification"] = {m: variance_amplification(sc, m) for m in ("linear", "richardson")}
-    ratios, below, n = [], 0, 0
+    ratios, below, n, viol = [], 0, 0, {}
     for k in available_zne():
         d = zne_data(*k)
         if "local" in list(np.asarray(d["foldings"]).astype(str)):
@@ -136,6 +147,18 @@ def misc(out):
         comb = estimates(d)[f"combined_{ex}"][1:]
         below += int(np.sum(comb < d["E0"][None, :] - 1e-12))
         n += comb.size
+        lam = budget(d, k[3])[1:]
+        rel = (comb - d["E0"][None, :]) / np.abs(d["E0"])[None, :]
+        for lo_, hi_, label in ((0, 0.2, "lambda<=0.2"), (0.2, 1.0, "0.2<lambda<=1"), (1.0, np.inf, "lambda>1")):
+            sel = (lam > lo_) & (lam <= hi_)
+            b = viol.setdefault(k[3], {}).setdefault(label, {"count": 0, "of": 0, "min_rel": 0.0, "by_ansatz": {}})
+            mask = rel[sel] < -1e-12
+            b["count"] += int(mask.sum())
+            b["of"] += int(rel[sel].size)
+            if mask.any():
+                b["min_rel"] = float(min(b["min_rel"], rel[sel][mask].min()))
+            b["by_ansatz"][k[0]] = b["by_ansatz"].get(k[0], 0) + int(mask.sum())
+    out["combined_below_E0_breakdown"] = viol
     if ratios:
         q = np.percentile(ratios, [5, 50, 95])
         out["local_over_global_residual"] = {"median": float(q[1]), "p5": float(q[0]), "p95": float(q[2])}

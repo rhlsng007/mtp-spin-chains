@@ -32,9 +32,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from config import CFG, RESULTS_DIR
-from noise.channels import make_noise_model
+from noise.channels import amplitude_damp, dephase, make_noise_model
 from noise.data import load_phase2
-from noise.mitigation import EXTRAPOLATORS, error_budget, extrapolate, extrapolation_coefficients, simulate_folded
+from noise.mitigation import (EXTRAPOLATORS, error_budget, extrapolate, extrapolation_coefficients,
+                              make_mitigation_noise_model, simulate_folded)
 from noise.shots import EnergyEstimator
 from models.hamiltonians import hamiltonian_terms
 from utils.io import load_results, result_exists
@@ -334,6 +335,40 @@ def run_checks(keys, ch: Checks, summary: list):
         ch.check(dev < 1e-10, f"scale-1 simulator reproduces {n_pts} saved Phase 4 energies (max dev {dev:.1e})")
     else:
         ch.note("Phase 4 files not found: cross-phase check skipped")
+
+    # C12 folding bias = half a final noise layer (live, p = N/2, h = h_c). For channels applied to
+    # each touched qubit after every noisy gate and covariant under the virtual RZ (amplitude damping,
+    # dephasing; the depolarizing part of "realistic" contributes nothing), the first-order errors
+    # telescope along each qubit: only "after the last gate" minus "before the first gate" (on |0>,
+    # where both act trivially) survives, so E_ZNE - E_ideal = [E(ideal + one final layer) - E_ideal] / 2.
+    worst, n_pts = 0.0, 0
+    s_tiny = 1e-7
+    for a in CFG.vqe.ansatze:
+        for N in CFG.system.sizes_noisy:
+            p = N // 2
+            try:
+                theta = load_phase2(a, N, p, h_sel=[CFG.tfim.h_critical])["params"][0]
+            except (FileNotFoundError, OSError, ValueError):
+                continue
+            est = EnergyEstimator(hamiltonian_terms("tfim", N, J=CFG.tfim.J, h=CFG.tfim.h_critical,
+                                                    boundary=CFG.tfim.boundary), N)
+            rho_id = simulate_folded(a, N, p, theta, None, 1)
+            e_id = est.exact(rho_id)
+            for c in ("amplitude_damping", "dephasing", "realistic"):
+                nm = make_mitigation_noise_model(c, s_tiny)
+                layer = rho_id.copy()
+                for q in range(N):
+                    layer = amplitude_damp(layer, q, nm.amplitude_damping, N)
+                    layer = dephase(layer, q, nm.dephasing, N)
+                pred = 0.5 * (est.exact(layer) - e_id)
+                for fold in MCFG.foldings:
+                    E = [est.exact(simulate_folded(a, N, p, theta, nm, lam, fold)) for lam in CFG.noise.zne_scale_factors]
+                    r = extrapolate(CFG.noise.zne_scale_factors, E, "richardson") - e_id
+                    worst = max(worst, abs(r / pred - 1))
+                    n_pts += 1
+    if n_pts:
+        ch.check(worst < 1e-3, f"folding bias equals half a final noise layer (Richardson, p = {s_tiny:.0e}, "
+                               f"{n_pts} cases, both foldings): max |ratio - 1| = {worst:.1e}")
 
 
 # ---------------------------------------------------------------------------

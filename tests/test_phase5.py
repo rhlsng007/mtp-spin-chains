@@ -192,6 +192,30 @@ def test_folding_bias_single_qubit_dephasing():
     assert abs(rich - e_id) < 1e-12
 
 
+@pytest.mark.parametrize("ansatz,method,channel",
+                         list(itertools.product(ANSATZE, FOLDINGS, ("amplitude_damping", "dephasing", "realistic"))))
+def test_folding_bias_is_half_a_final_noise_layer(ansatz, method, channel):
+    """
+    Channels applied to every touched qubit after each noisy gate (amplitude damping, dephasing)
+    telescope along each qubit, so the first-order zero-noise limit of folding is the ideal circuit
+    followed by half a layer of that noise; the depolarizing part of "realistic" contributes nothing.
+    """
+    from noise.channels import amplitude_damp, dephase
+    N, p, s = 4, 2, 1e-7
+    th = _theta(ansatz, N, p, seed=11)
+    nm = make_mitigation_noise_model(channel, s)
+    est = EnergyEstimator(_terms(N), N)
+    rho_id = simulate_folded(ansatz, N, p, th, None, 1)
+    e_id = est.exact(rho_id)
+    layer = rho_id.copy()
+    for q in range(N):
+        layer = amplitude_damp(layer, q, nm.amplitude_damping, N)
+        layer = dephase(layer, q, nm.dephasing, N)
+    pred = 0.5 * (est.exact(layer) - e_id)
+    E = [est.exact(simulate_folded(ansatz, N, p, th, nm, lam, method)) for lam in SCALES]
+    assert extrapolate(SCALES, E, "richardson") - e_id == pytest.approx(pred, rel=1e-4)
+
+
 @pytest.mark.parametrize("channel", PHASE5_CHANNELS)
 def test_folded_states_are_valid_density_matrices(channel):
     N, p = 4, 2
