@@ -46,7 +46,7 @@ Scripts are always run from the project root, e.g. `python experiments\phase1_ed
 - Archives: Windows `tar` (`tar -a -c -f out.zip <folders>`) instead of `Compress-Archive` for large folders; check the entry count with `tar -t -f out.zip`.
 - The Desktop is redirected by OneDrive; use `$HOME\Downloads` in commands.
 
-**Git workflow (settled in Phase 2):** one branch per phase (`phaseN-...`; create it before the first commit of the phase, since a commit made on `main` by mistake has to be moved with `git branch phaseN-...`, `git checkout phaseN-...`, `git branch -f main HEAD~1`); commit the code before running experiments, so every result records the commit that produced it; merge with `--no-ff`; tag `phaseN-complete`. Tags are lightweight, so push them explicitly (`git push origin <tag>`); `--follow-tags` skips them. Tags so far: `phase1-complete` (6051c9d), `phase2-complete` (0f7015c), `phase3-complete` (9110ea2), `phase4-complete` (99928f4), `phase5-complete` (06622d4), `phase6-complete` (<P6_MERGE>).
+**Git workflow (settled in Phase 2):** one branch per phase (`phaseN-...`; create it before the first commit of the phase, since a commit made on `main` by mistake has to be moved with `git branch phaseN-...`, `git checkout phaseN-...`, `git branch -f main HEAD~1`); commit the code before running experiments, so every result records the commit that produced it; merge with `--no-ff`; tag `phaseN-complete`. Tags are lightweight, so push them explicitly (`git push origin <tag>`); `--follow-tags` skips them. Tags so far: `phase1-complete` (6051c9d), `phase2-complete` (0f7015c), `phase3-complete` (9110ea2), `phase4-complete` (99928f4), `phase5-complete` (06622d4), `phase6-complete` (53189d3).
 
 ## 4. Project structure
 
@@ -587,7 +587,7 @@ $$
 
 ## 13. Phase 6: completed
 
-**Status:** done; merged into `main` at <P6_MERGE>, tag `phase6-complete`. Code at 27b3527 (datasets produced at this commit); final figures and summary in <P6_FIGS>. `pytest -q`: 350 tests pass (27 for Phase 6; the suite had 323 before Phase 6, not the 311 recorded at the end of Phase 5). `experiments\phase6_plots.py`: 16 checks passed, 0 failed, 20 notes. Report: to be written (Claude Doc "Phase 6: Machine-Learning Datasets for Phase Classification of the Transverse-Field Ising Chain").
+**Status:** done; merged into `main` at 53189d3, tag `phase6-complete`. Code at 27b3527 (datasets produced at this commit); final figures and summary in e36e370. `pytest -q`: 350 tests pass (27 for Phase 6; the suite had 323 before Phase 6, not the 311 recorded at the end of Phase 5). `experiments\phase6_plots.py`: 16 checks passed, 0 failed, 20 notes. Report: to be written (Claude Doc "Phase 6: Machine-Learning Datasets for Phase Classification of the Transverse-Field Ising Chain").
 
 **How to run (from the project root, after Phases 1, 2 and 5):**
 
