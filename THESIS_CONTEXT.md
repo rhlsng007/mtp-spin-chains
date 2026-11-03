@@ -42,9 +42,11 @@ Scripts are always run from the project root, e.g. `python experiments\phase1_ed
 - Screen-off also triggers Modern Standby (found in Phase 4: a 30-minute screen timeout caused a 7-minute pause). For long runs set `powercfg /change monitor-timeout-ac 0` and the lid action on mains to "do nothing" (`powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0`, then `powercfg /setactive SCHEME_CURRENT`); restore the screen timeout afterwards.
 - Measured noisy-simulation cost (Phase 4): about 0.25 s per N = 8 density-matrix energy evaluation with 12 workers under full load, about 5 times the single-core speed (memory-bandwidth contention and efficiency cores). Budget long noisy runs from this rate. Progress lines appear only when a whole job finishes; check liveness with `Get-Process python | Select-Object Id, CPU`.
 - Phase 5 ZNE run (72 jobs, 12 workers): 1,932 s; the longest jobs are HEA N = 8, p = 4 (1,200 to 1,370 s each), so the wall time is set by the N = 8 jobs.
+- Phase 6 dataset run (38 jobs, 12 workers): 170 s; the longest jobs are the N = 8 noisy and ZNE runs (120 to 170 s each) and ED N = 14 (96 s).
+- Archives: Windows `tar` (`tar -a -c -f out.zip <folders>`) instead of `Compress-Archive` for large folders; check the entry count with `tar -t -f out.zip`.
 - The Desktop is redirected by OneDrive; use `$HOME\Downloads` in commands.
 
-**Git workflow (settled in Phase 2):** one branch per phase (`phaseN-...`); commit the code before running experiments, so every result records the commit that produced it; merge with `--no-ff`; tag `phaseN-complete`. Tags are lightweight, so push them explicitly (`git push origin <tag>`); `--follow-tags` skips them. Tags so far: `phase1-complete` (6051c9d), `phase2-complete` (0f7015c), `phase3-complete` (9110ea2), `phase4-complete` (99928f4), `phase5-complete` (06622d4).
+**Git workflow (settled in Phase 2):** one branch per phase (`phaseN-...`; create it before the first commit of the phase, since a commit made on `main` by mistake has to be moved with `git branch phaseN-...`, `git checkout phaseN-...`, `git branch -f main HEAD~1`); commit the code before running experiments, so every result records the commit that produced it; merge with `--no-ff`; tag `phaseN-complete`. Tags are lightweight, so push them explicitly (`git push origin <tag>`); `--follow-tags` skips them. Tags so far: `phase1-complete` (6051c9d), `phase2-complete` (0f7015c), `phase3-complete` (9110ea2), `phase4-complete` (99928f4), `phase5-complete` (06622d4), `phase6-complete` (<P6_MERGE>).
 
 ## 4. Project structure
 
@@ -56,24 +58,26 @@ mtp-spin-chains/
 │                          # free_fermion.py                      (Phase 1, done)
 │                          # vqe_entanglement.py                  (Phase 3, done)
 │                          # mixed_state.py                       (Phase 4, done)
+│                          # ff_correlators.py                    (Phase 6, done)
 ├── vqe/                   # ansatz.py, statevector.py, optimize.py, gradients.py,
 │                          # metrics.py, pennylane_ref.py         (Phase 2, done)
 │                          # spsa.py                              (Phase 4, done)
 ├── noise/                 # channels.py, density.py, shots.py,
 │                          # data.py, evaluate.py                 (Phase 4, done)
 │                          # mitigation.py                        (Phase 5, done)
-├── ml/                    # dataset.py, classifiers.py           (Phase 6, 7)
+├── ml/                    # features.py, shadows.py, dataset.py  (Phase 6, done)
+│                          # classifiers.py                       (Phase 7)
 ├── utils/                 # io.py, seeding.py, plotting.py       (Phase 0, done)
 ├── experiments/           # one script per thesis figure
 ├── scripts/               # check_env.py, phase2_report_data.py, phase3_report_data.py,
 │                          # phase4_diag_negativity.py, phase4_diag_training.py,
 │                          # phase4_report_data.py, phase5_report_data.py
-├── tests/                 # test_phase0.py ... test_phase5.py (311 tests)
+├── tests/                 # test_phase0.py ... test_phase6.py (350 tests)
 ├── results/               # .npz data + .json metadata (gitignored; back up separately)
 └── figures/               # .pdf tracked in git, .png gitignored
 ```
 
-`results/` is gitignored, so all result data exist only locally. Keep a backup zip of `results\phase1` to `results\phase5` outside the repo; regenerating Phase 2 takes about 3 hours, Phase 3 about 6 minutes, Phase 4 about 6 hours (experiment A alone 3 minutes), Phase 5 about 33 minutes.
+`results/` is gitignored, so all result data exist only locally. Only the `phaseN_summary.txt` files are tracked (`.gitignore` excludes `results/**/*.npz` and `results/**/*.json`). Keep a backup zip of all result folders outside the repo and off the laptop; the latest is `mtp_results_phase1-6_backup_2026-11-03.zip` (747 files, 316.9 MB; file counts per phase: 85, 182, 62, 182, 158, 78). Regenerating Phase 2 takes about 3 hours, Phase 3 about 6 minutes, Phase 4 about 6 hours (experiment A alone 3 minutes), Phase 5 about 33 minutes, Phase 6 about 3 minutes (needs Phases 1, 2 and 5).
 
 ## 5. Existing utilities (Phase 0)
 
@@ -84,7 +88,7 @@ mtp-spin-chains/
 - `CFG.cluster.h1_grid()`: 0 to 1.6, step 0.1; `CFG.cluster.h2_values = (-1.0, 0.0, 1.0)`.
 - `CFG.system.sizes_exact = (4, 6, 8, 10, 12, 14)`, `sizes_noiseless = (4, ..., 12)`, `sizes_noisy = (4, 6, 8)`, `CFG.system.depths(N, noisy)` (1..N noiseless, 1..N/2 noisy).
 - `CFG.ed` (added in Phase 1): `k_per_sector=3`, `dense_max_dim=512`, `eigsh_tol=0` (machine precision), `degeneracy_tol=1e-9`, `eigsh_seed=0`, `save_states=True`, `cc_ell_min=2`, `cc_boundaries=("open","periodic")`, `xxz_cc_deltas=(0.0, 0.5)`. `CFG.cluster.boundary = "open"` was also added.
-- `CFG.vqe` (extended in Phases 2 and 4, see Sections 9 and 11), `CFG.ent` (added in Phase 3, see Section 10), `CFG.noise` (extended in Phase 4, see Section 11; `CFG.noise.strengths()` gives 0 plus 10 log-spaced values from 1e-4 to 5e-2), `CFG.mitigation` (added in Phase 5, see Section 12; `CFG.mitigation.strengths()` gives 0 plus 10 log-spaced values from 1e-5 to 1e-2), `CFG.ml`, `CFG.seeds.seeds(noisy)` (master seed 2026; `n_seeds_noisy = 3`).
+- `CFG.vqe` (extended in Phases 2 and 4, see Sections 9 and 11), `CFG.ent` (added in Phase 3, see Section 10), `CFG.noise` (extended in Phase 4, see Section 11; `CFG.noise.strengths()` gives 0 plus 10 log-spaced values from 1e-4 to 5e-2), `CFG.mitigation` (added in Phase 5, see Section 12; `CFG.mitigation.strengths()` gives 0 plus 10 log-spaced values from 1e-5 to 1e-2), `CFG.ml` (extended in Phase 6, see Section 13), `CFG.seeds.seeds(noisy)` (master seed 2026; `n_seeds_noisy = 3`).
 - Paths: `RESULTS_DIR`, `FIGURES_DIR`. Helper `make_grid(start, stop, step)` avoids floating-point drift.
 
 **`utils/io.py`:** `save_results(name, arrays, params, subdir)`, `load_results(name, subdir)`, `result_exists(...)`, `load_or_compute(name, compute_fn, params, subdir, recompute=False)`. Metadata JSON stores params, full config, timestamp, git commit, package versions.
@@ -275,6 +279,34 @@ $$
 E_{\text{ZNE}} - E_{\text{ideal}} = \frac{1}{2}\left[\operatorname{Tr}\!\big(H\,\mathcal{N}_p^{\otimes N}(\rho_{\text{ideal}})\big) - E_{\text{ideal}}\right] + O(p^2)
 $$
 
+**Free-fermion correlators of the open TFIM (Phase 6 reference).** After a Hadamard on every site and the Jordan–Wigner Majoranas a_{2q} = S_q X_q, a_{2q+1} = S_q Y_q (S_q = ∏_{p<q} Z_p):
+
+$$
+H' = \frac{i}{4}\,a^{T} M a, \qquad \Gamma = -UV^{T} \quad (M = USV^{T}), \qquad \langle X_i\rangle = -\Gamma_{2i,\,2i+1}, \qquad \langle Z_iZ_j\rangle = (-1)^{j-i}\operatorname{Pf}\!\left(\Gamma_{[2i+1,\,2j]}\right)
+$$
+
+**Classical shadows (Phase 6):** random single-qubit Pauli bases b_q, outcomes v_q = ±1; for a Pauli string P of weight k with letters t_q,
+
+$$
+\hat{o} = \prod_{q \in \operatorname{supp} P} 3\,[b_q = t_q]\, v_q, \qquad \mathbb{E}[\hat{o}] = \langle P\rangle, \qquad \mathbb{E}[\hat{o}^2] = 3^{k}
+$$
+
+$$
+\operatorname{Var}(\widehat{ZZ}) = 9 - \langle Z_iZ_j\rangle^2, \qquad \operatorname{Var}(\hat{X}) = 3 - \langle X_i\rangle^2 \qquad \text{(per snapshot; divide by } M\text{)}
+$$
+
+**Readout on expectation values (Phase 6):** for a column-stochastic C_q[outcome, state] each measured value has mean a_q + b_q v, and the per-qubit correction is unbiased for products on distinct qubits (the tensored linear inverse of Phase 5):
+
+$$
+a_q = C_{01} - C_{10}, \qquad b_q = 1 - C_{10} - C_{01}, \qquad v \;\to\; \frac{v - a_q}{b_q}
+$$
+
+**Critical finite-size scaling of M² (Phase 6 observation):** with Δ_σ = 1/8,
+
+$$
+M^2(h_c) \propto N^{-2\Delta_\sigma} = N^{-1/4}
+$$
+
 ## 7. Full implementation plan
 
 | Phase | Content | Status |
@@ -285,8 +317,8 @@ $$
 | 3 | Entanglement of VQE states, central-charge extraction vs depth | **Done** |
 | 4 | Noisy density-matrix simulation (N = 4–8), shots, SPSA, noise sweeps | **Done** |
 | 5 | Error mitigation: readout correction, ZNE with gate folding | **Done** |
-| 6 | ML datasets: correlators, classical shadows, clean and noisy | **Next** |
-| 7 | ML: logistic regression, MLP, PCA, optional QCNN, cross-noise tests | |
+| 6 | ML datasets: correlators, classical shadows, clean and noisy | **Done** |
+| 7 | ML: logistic regression, MLP, PCA, optional QCNN, cross-noise tests | **Next** |
 | 8 | Figures, reproducibility, writing | |
 
 ## 8. Phase 1: completed
@@ -552,3 +584,57 @@ $$
 - ZNE is not applied to the Phase 6 datasets by default: at 1,000 to 10,000 shots it adds more variance than it removes bias below p ≈ 1e-4. A ZNE-mitigated dataset is generated only in the λ ≈ 0.05 to 0.3 window, to test whether mitigation restores classification accuracy.
 - Phases 6 and 7 classify from correlators and classical shadows, not energies (confirmed: mitigated energies are not variational and are shot-limited).
 - Report the half-final-layer folding bias as a finding, subject to the literature check in the open items; report the amplitude-damping SPAM cancellation as an observation only.
+
+## 13. Phase 6: completed
+
+**Status:** done; merged into `main` at <P6_MERGE>, tag `phase6-complete`. Code at 27b3527 (datasets produced at this commit); final figures and summary in <P6_FIGS>. `pytest -q`: 350 tests pass (27 for Phase 6; the suite had 323 before Phase 6, not the 311 recorded at the end of Phase 5). `experiments\phase6_plots.py`: 16 checks passed, 0 failed, 20 notes. Report: to be written (Claude Doc "Phase 6: Machine-Learning Datasets for Phase Classification of the Transverse-Field Ising Chain").
+
+**How to run (from the project root, after Phases 1, 2 and 5):**
+
+- `python experiments\phase6_datasets.py --workers 12` (38 files, 170 s). Cached per file. Options: `--experiments ed vqe noisy zne`, `--sizes`, `--ansatze`, `--channels` (realistic, depolarizing, amplitude_damping, dephasing), `--recompute`. Writes `results/phase6/dataset_index.json`.
+- `python experiments\phase6_plots.py` (16 checks, 4 figures in `figures/phase6/`, `results/phase6/phase6_summary.txt`).
+
+**API (for Phase 7):**
+
+- `analysis.ff_correlators`: `pfaffian(A)` (Parlett–Reid with pivoting), `majorana_matrix(N, J, h)`, `ground_covariance`, `ff_energy`, `ff_observables(N, J, h)` giving `zz`, `x`, `z` of the even ground state.
+- `ml.features`: `FEATURE_SETS = ("corr", "zz", "compact")`; `bits`, `z_signs`, `pure_observables(psi, N)`, `mixed_observables(rho, N)` (dicts `zz` (N, N), `x`, `z`); `readout_affine(mats)`, `affine_observables`, `readout_biased(obs, R)`, `readout_corrected(obs, R, C)`; `n_features`, `feature_names`, `corr_features(zz, x)`, `unpack_features(X, N)`, `magnetization_m2`, `compact_features`, `compact_names`, `select_features(X, N, kind)`, `energy_from_features(X, N, h, J)`.
+- `ml.shadows`: `BASES = ("X", "Y", "Z")` (codes 0, 1, 2), `ROTATIONS`; `draw_stream(rng, M, N)` (bases, sampling uniforms u, readout uniforms r); `sample_pure(psi, bases, u, chunk_elements)` (prefix tree of 6^k branches, then per-snapshot projection), `outcome_table(rho, N)` (all 6^N probabilities), `marginal_tables`, `sample_mixed(tables, bases, u)`, `outcome_probabilities`, `apply_readout(bits, r, p01, p10)`, `shadow_observables(bases, bits, a, b)` (optional readout correction), `single_snapshot_variance(obs)`, `pack_bits`, `unpack_bits`.
+- `ml.dataset`: `SOURCE_KEYS = {"ed": 0, "hva": 1, "hea": 2}`, `SOURCES`, `NOISY_VARIANTS = ("gate", "meas", "ro")`; `field_grid(noisy)`, `labels(h)`, `train_field_mask(h)`, `repetition_split(R)`, `resolve_depth(rule, N)`, `snapshot_rng`, `draw_snapshots(source_key, N, p, field_index, R, M, scale)`, `calibration(N, noise_model, R)`; generators `pure_dataset`, `ed_dataset(N)`, `vqe_dataset(ansatz, N, p)`, `noisy_dataset(ansatz, N, p, channel, thetas, h, strengths, R, M)`, `zne_dataset(...)`, `error_budget_for`, `zne_window`; access `dataset_name(source, N, ansatz, depth, channel)` (returns name and subdir), `load_dataset(...)`, `sample_matrix(ds, kind, variant, strength, part, feature_set)` returning (X, y, h), `snapshots(ds, field, rep, strength, measured)`, `write_index()`.
+
+**`CFG.ml` (extended in Phase 6):** existing `train_h_ordered_max=0.6`, `train_h_disordered_min=1.4`, `test_fraction=0.2` (now the share of shadow repetitions kept for testing), `n_shadow_snapshots=1000`, `mlp_hidden=(32,16)`, `learning_rate=1e-3`, `epochs=300`, `n_training_seeds=5`; new `shadow_repetitions=20`, `label_ordered=0`, `label_disordered=1`, `label_critical=-1`, `ed_sizes=(4,...,14)`, `vqe_sizes=(4,...,12)`, `vqe_depth_rules=("half","full")`, `noisy_sizes=(4,6,8)`, `noisy_depth_rule="half"`, `noisy_channels=("realistic",)`, `noisy_fine_grid=True`, `zne_lambda_window=(0.05,0.3)`, `zne_channels=("realistic",)`, `sampler_chunk_elements=2**22`, tolerances `exact_tol=1e-10`, `ff_tol=1e-8`, `z_frac_max=0.01`, `z_abs_max=6.0`, `t_frac_max=0.02`, `var_ratio_tol=0.1`, `snapshot_match_min=0.9999`.
+
+**Conventions fixed in Phase 6:**
+
+- Model: open TFIM only. Every source uses the fine grid (39 fields, step 0.05), noisy data included: the parameters are fixed (experiment-A style), so the coarse noisy grid of Phases 4 and 5 (set by the cost of training under noise) is not needed.
+- Sources: ED even-parity ground state (N = 4 to 14); noiseless Phase 2 states at p = N/2 and p = N (N = 4 to 12, both ansätze); noisy: the Phase 2 optimum at p = N/2 under the Phase 5 "realistic" model at the 11 strengths of `CFG.mitigation.strengths()`, with readout error (N = 4, 6, 8); ZNE: global folding, scales 1, 3, 5, Richardson, only at strengths with λ in [0.05, 0.3]. Density matrices are not saved.
+- Features ("corr"): upper triangle of ⟨Z_iZ_j⟩ (row-major), then ⟨X_i⟩; N(N − 1)/2 + N values. Raw, not connected, correlators, so symmetry-broken HEA states are not placed in the disordered phase. ⟨Z_i⟩ is stored for diagnostics only. "compact": M², mean X, mean nearest-neighbour ZZ, end-to-end ZZ.
+- Shadows: R = 20 independent shadows of M = 1000 snapshots per field (one sample each). Both samplers draw qubits in order 0..N − 1 with s_q = 1 if u_q ≥ P(s_q = 0 | earlier outcomes), so pure and mixed samplers give identical snapshots for identical states and random numbers. Bases stored as uint8 [field, rep, M, N], bits packed along the qubit axis.
+- Noisy variants: "gate" (gate noise, ideal readout), "meas" (readout error, uncorrected), "ro" (per-qubit correction with a 10,000-shot tensored calibration whose X gates carry gate noise, one calibration per repetition). Exact (infinite-shot) values are stored for all three; the exact "ro" uses the exact calibration.
+- Labels: y = 0 for h < h_c, 1 for h > h_c, −1 at h = h_c (excluded from accuracies). Split: training fields h < 0.6 or h > 1.4 (10 ordered, 12 disordered); test fields all 39. Repetitions 17 to 20 are test-only, so no training snapshot is ever tested on.
+- Seeds: snapshots `SeedSequence([2026, 15, source, N, p, field, rep, scale])` (source 0 ED, 1 HVA, 2 HEA; p = 0 for ED), independent of channel and strength (common random numbers); noiseless VQE and noisy data share the stream, so noisy strength 0 reproduces the noiseless snapshots. Calibration `SeedSequence([2026, 16, N])`, redrawn per (channel, strength). ZNE scale 1 uses the noisy stream; scales 3 and 5 have their own.
+
+**Saved files in `results/phase6/` (by source; noise strength is the leading axis):**
+
+- `ed/ds_ed_N{N}` (6): `X` [39, F], `Xs` [39, 20, F], `z`, `zs`, `energy`, `E0`, `bases` [39, 20, 1000, N], `bits` (packed).
+- `vqe/ds_vqe_{hva|hea}_N{N}_p{p}` (20): as ED plus `params`, `phase2_energy`, `E0`, `fidelity`, `fidelity_gs`.
+- `noisy/ds_noisy_{hva|hea}_N{N}_p{p}_realistic` (6): `X_{gate|meas|ro}` [11, 39, F], `Xs_{gate|meas|ro}` [11, 39, 20, F], `z_*`, `zs_*`, `bases` [39, 20, 1000, N], `bits_gate`, `bits_meas` [11, 39, 20, 1000, bytes], `energy`, `purity`, `fidelity_ideal` [11, 39], `strengths`, `lam`, `n_1q`, `n_2q`, `params`, `readout_matrices`, `cal_exact` [11, N, 2, 2], `cal_samples` [11, 20, N, 2, 2], `phase2_energy`, `E0`.
+- `zne/ds_zne_{hva|hea}_N{N}_p{p}_realistic` (6): `X_gate_scales`, `X_ro_scales` [2, 3, 39, F], `Xs_ro_scales` [2, 3, 39, 20, F], `energy_scales`, `X_zne_gate`, `X_zne_ro` [2, 39, F], `Xs_zne_ro` [2, 39, 20, F], `energy_zne`, `strengths`, `strength_index`, `lam`, `scales`, `coefficients`, `cal_exact`, `cal_samples`.
+- Every file: `h`, `y`, `train_field`, `test_field`, `rep_train`, `rep_test`, `feature_names`, `n_qubits`, `snapshots`, `repetitions`, `h_critical`, `depth`, `source`, `ansatz`, `seconds`. Also `dataset_index.json` and `phase6_summary.txt`. Total 164.4 MB.
+
+**Key results:**
+
+- Validation: ED features equal free-fermion correlators to 1.4e-14 (N = 4 to 14, all fields); ED M² equals Phase 1 to 2.2e-15; energies rebuilt from features equal ED (7.5e-14) and Phase 2 (1.2e-13); noisy Tr(ρH) equals the Phase 5 `E_true` to 8.0e-14 (folded scales 2.1e-13). Exact ZZ matrices are positive semidefinite (minimum eigenvalue 2.5e-3) with M² in [0.125, 0.997].
+- Shadows: of 100,581 z-scores, 0.27 % lie beyond 3σ (normal 0.27 %), max |z| = 4.13; mean empirical/analytic variance 1.0008, median 0.9655 (χ²₁₉/19 median 0.9651). Readout t-statistics beyond 3: 0.77 % (uncorrected) and 0.75 % (corrected), expected 0.74 %.
+- Identities: readout correction exact at strength 0; noisy strength 0 reproduces the noiseless snapshots 100 %; ZNE scale 1 equals the noisy dataset exactly; purity monotone in strength.
+- ZNE in the window (λ = 0.07 and 0.15 at N = 8; 0.08 and 0.17 at N = 6; 0.07 and 0.16 at N = 4): exact gate-noise feature error reduced to 0.7 % to 4.1 % of the unmitigated error; shadow standard deviation amplified by √(167/32) ≈ 2.28.
+- ED separability: M² margin between the training regions 0.376, 0.505, 0.589, 0.644, 0.683, 0.711 for N = 4 to 14 (shadow margins within 0.01). M²(h_c) = 0.554, 0.482, 0.440, 0.412, 0.390, 0.373; local log-log slopes −0.30 (N = 10 to 12) and −0.29 (N = 12 to 14), approaching the expected −1/4 (hand estimate, not a fit).
+- Noise: the exact M² margin is never closed, even at p = 1e-2 (λ = 3.2 at N = 8): N = 8 margins 0.322 → 0.039 (HVA) and 0.599 → 0.073 (HEA). The HVA margin at p = N/2 is about half the HEA's (ordered phase is the HVA's hardest region, Phase 2).
+- Readout: feature bias up to 0.049 to 0.059 at strength 0, removed exactly by correction; the residual after correction reaches 1.5e-2 to 2.3e-2 only at the strongest noise (SPAM from the noisy calibration X gates).
+
+**Decisions taken at the end of Phase 6 (for Phase 7):**
+
+- Default noisy variant "ro" (what an experiment would report); "gate" and "meas" isolate gate noise and readout. Classifiers train on `rep_train` shadows at the training fields and are tested on `rep_test` shadows at all fields; accuracies exclude y = −1.
+- Exact features keep the training regions separable at every strength, so the central Phase 7 quantities are the drift of h_c^ML with noise and the accuracy of shadow-based classifiers, where shot noise (M² standard deviation of order 0.01 to 0.03 at N = 8) competes with margins of 0.04 to 0.07 at the strongest noise.
+- Expect h_c^ML below 1 at small N from the finite-size crossover (Phase 1 Binder crossings 0.92 to 0.98); compare against ED at the same N, not against h_c = 1 alone.
+- The ZNE dataset tests whether mitigation restores h_c^ML in the λ window, at the cost of about 2.3 times larger shadow noise.
+- Channel dependence (`--channels depolarizing amplitude_damping dephasing`) and the cluster-Ising QCNN dataset (T7.5) are optional and not yet generated.
