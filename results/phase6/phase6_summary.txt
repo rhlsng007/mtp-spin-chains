@@ -1,0 +1,51 @@
+Phase 6 summary: 16 checks passed, 0 failed, 20 notes
+
+== Inventory ==
+[NOTE] ed: 6 files, 15.4 MB: ds_ed_N10, ds_ed_N12, ds_ed_N14, ds_ed_N4, ds_ed_N6, ds_ed_N8
+[NOTE] vqe: 20 files, 45.9 MB: ds_vqe_hea_N10_p10, ds_vqe_hea_N10_p5, ds_vqe_hea_N12_p12, ds_vqe_hea_N12_p6, ds_vqe_hea_N4_p2, ds_vqe_hea_N4_p4, ds_vqe_hea_N6_p3, ds_vqe_hea_N6_p6, ds_vqe_hea_N8_p4, ds_vqe_hea_N8_p8, ds_vqe_hva_N10_p10, ds_vqe_hva_N10_p5, ds_vqe_hva_N12_p12, ds_vqe_hva_N12_p6, ds_vqe_hva_N4_p2, ds_vqe_hva_N4_p4, ds_vqe_hva_N6_p3, ds_vqe_hva_N6_p6, ds_vqe_hva_N8_p4, ds_vqe_hva_N8_p8
+[NOTE] noisy: 6 files, 96.4 MB: ds_noisy_hea_N4_p2_realistic, ds_noisy_hea_N6_p3_realistic, ds_noisy_hea_N8_p4_realistic, ds_noisy_hva_N4_p2_realistic, ds_noisy_hva_N6_p3_realistic, ds_noisy_hva_N8_p4_realistic
+[NOTE] zne: 6 files, 6.8 MB: ds_zne_hea_N4_p2_realistic, ds_zne_hea_N6_p3_realistic, ds_zne_hea_N8_p4_realistic, ds_zne_hva_N4_p2_realistic, ds_zne_hva_N6_p3_realistic, ds_zne_hva_N8_p4_realistic
+[NOTE] total 164.4 MB; R = 20 shadows of M = 1000 snapshots per field
+
+== Labels and splits (T6.3, T6.4) ==
+[PASS] C1 labels (0 below h_c, 1 above, -1 at h_c), training fields and repetition split: 38 files; 22 training fields (10 ordered, 12 disordered); bad: none
+
+== Exact features ==
+[PASS] C2 ED features against free-fermion correlators (all N, all fields): max |dX| = 1.42e-14 (tol 1e-08)
+[PASS] C3 ED energy rebuilt from features equals the ED ground energy: max |dE| = 7.46e-14
+[PASS] C4 VQE energy rebuilt from features equals the Phase 2 energy: max |dE| = 1.17e-13 over 20 files
+[PASS] C5 exact ZZ matrices positive semidefinite and 0 <= M^2 <= 1 (all states, all noise): min eigenvalue 2.50e-03, M^2 in [0.1251, 0.9967]
+[PASS] C6 ED M^2 equals the saved Phase 1 M^2: max |dM^2| = 2.22e-15 over 6 sizes
+
+== Classical shadows ==
+[PASS] C7 shadow estimates unbiased (z-scores of the repetition mean against exact values): 100581 values, |z| > 3: 0.27 % (normal 0.27 %), max |z| = 4.13, mean z = +0.018
+[PASS] C8 shadow variance equals the analytic (9 - <ZZ>^2)/M and (3 - <X>^2)/M: mean empirical/analytic = 1.0008, median 0.9655 (chi-square expectation 0.9651 for R = 20)
+[NOTE] ed: |z| > 3 in 0.26 %, variance ratio mean 0.9976
+[NOTE] vqe: |z| > 3 in 0.29 %, variance ratio mean 1.0001
+[NOTE] noisy: |z| > 3 in 0.26 %, variance ratio mean 1.0018
+[PASS] C9 readout shadows match the exact readout-biased and readout-corrected values: |t| > 3: meas 0.77 %, ro 0.75 % (t with 19 dof: 0.74 %)
+
+== Noisy datasets ==
+[PASS] C10 strength 0: readout-corrected = gate-only features (no SPAM without gate noise): max |dX| = 0.00e+00
+[PASS] C11 strength 0 reproduces the noiseless VQE dataset (features, bases, snapshots): max |dX| = 1.35e-14, bases identical: True, identical snapshots 100.0000 % (6 files)
+[PASS] C12 purity falls monotonically with strength; fidelity to the noiseless state is 1 at 0: max |F(0) - 1| = 9.33e-15
+[PASS] C13 noisy energies Tr(rho H) equal the Phase 5 E_true (scale 1; ZNE: every scale): max |dE| = 7.99e-14 (6 files), folded 2.10e-13 (6 files)
+
+== ZNE datasets ==
+[PASS] C14 ZNE scale 1 equals the noisy dataset (same snapshots and calibration): max |dX| = 0.00e+00 (6 files)
+[PASS] C15 ZNE (exact, gate noise) reduces the median feature error in the lambda window: hea N=4 lambda=0.072: 0.020; hea N=4 lambda=0.155: 0.041; hea N=6 lambda=0.081: 0.013; hea N=6 lambda=0.174: 0.030; hea N=8 lambda=0.069: 0.007; hea N=8 lambda=0.149: 0.019; hva N=4 lambda=0.072: 0.019; hva N=4 lambda=0.155: 0.039; hva N=6 lambda=0.081: 0.012; hva N=6 lambda=0.174: 0.029; hva N=8 lambda=0.069: 0.008; hva N=8 lambda=0.149: 0.017
+
+== Separability of the training regions ==
+[PASS] C16 ED: M^2 in the ordered training region exceeds M^2 in the disordered region (every N): N=4: margin 0.376 (shadow 0.366), M^2(h_c) 0.554; N=6: margin 0.505 (shadow 0.499), M^2(h_c) 0.482; N=8: margin 0.589 (shadow 0.584), M^2(h_c) 0.440; N=10: margin 0.644 (shadow 0.642), M^2(h_c) 0.412; N=12: margin 0.683 (shadow 0.689), M^2(h_c) 0.390; N=14: margin 0.711 (shadow 0.714), M^2(h_c) 0.373
+[NOTE] HEA N=4 p=2 realistic: M^2 margin 0.375 at p = 0, 0.189 at p = 1e-02 (lambda = 0.72); kept at all strengths
+[NOTE] HEA N=4: readout bias of features at p = 0 up to 0.059; after exact correction with the noisy-gate calibration the residual (SPAM) is up to 2.32e-02
+[NOTE] HEA N=6 p=3 realistic: M^2 margin 0.508 at p = 0, 0.137 at p = 1e-02 (lambda = 1.74); kept at all strengths
+[NOTE] HEA N=6: readout bias of features at p = 0 up to 0.054; after exact correction with the noisy-gate calibration the residual (SPAM) is up to 1.73e-02
+[NOTE] HEA N=8 p=4 realistic: M^2 margin 0.599 at p = 0, 0.073 at p = 1e-02 (lambda = 3.20); kept at all strengths
+[NOTE] HEA N=8: readout bias of features at p = 0 up to 0.051; after exact correction with the noisy-gate calibration the residual (SPAM) is up to 1.70e-02
+[NOTE] HVA N=4 p=2 realistic: M^2 margin 0.237 at p = 0, 0.113 at p = 1e-02 (lambda = 0.72); kept at all strengths
+[NOTE] HVA N=4: readout bias of features at p = 0 up to 0.049; after exact correction with the noisy-gate calibration the residual (SPAM) is up to 1.51e-02
+[NOTE] HVA N=6 p=3 realistic: M^2 margin 0.285 at p = 0, 0.071 at p = 1e-02 (lambda = 1.74); kept at all strengths
+[NOTE] HVA N=6: readout bias of features at p = 0 up to 0.051; after exact correction with the noisy-gate calibration the residual (SPAM) is up to 1.61e-02
+[NOTE] HVA N=8 p=4 realistic: M^2 margin 0.322 at p = 0, 0.039 at p = 1e-02 (lambda = 3.20); kept at all strengths
+[NOTE] HVA N=8: readout bias of features at p = 0 up to 0.053; after exact correction with the noisy-gate calibration the residual (SPAM) is up to 1.65e-02

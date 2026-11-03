@@ -295,12 +295,37 @@ class MitigationConfig:
 class MLConfig:
     train_h_ordered_max: float = 0.6     # train only deep in the ordered phase ...
     train_h_disordered_min: float = 1.4  # ... and deep in the disordered phase
-    test_fraction: float = 0.2
-    n_shadow_snapshots: int = 1000
+    test_fraction: float = 0.2           # Phase 6: share of shadow repetitions kept for testing only
+    n_shadow_snapshots: int = 1000       # snapshots M per classical shadow
     mlp_hidden: tuple = (32, 16)
     learning_rate: float = 1e-3
     epochs: int = 300
     n_training_seeds: int = 5
+
+    # Phase 6: datasets (T6.1 to T6.4)
+    shadow_repetitions: int = 20         # independent shadows R per field (one sample each)
+    label_ordered: int = 0               # h < h_c
+    label_disordered: int = 1            # h > h_c
+    label_critical: int = -1             # h = h_c: no label, excluded from accuracies
+    ed_sizes: tuple = (4, 6, 8, 10, 12, 14)
+    vqe_sizes: tuple = (4, 6, 8, 10, 12)
+    vqe_depth_rules: tuple = ("half", "full")   # p = N/2 (the noisy depth) and p = N
+    noisy_sizes: tuple = (4, 6, 8)
+    noisy_depth_rule: str = "half"       # Phase 4/5 depth p = N/2
+    noisy_channels: tuple = ("realistic",)      # Phase 5 decision; Phase 4 channels optional
+    noisy_fine_grid: bool = True         # fixed parameters: noisy data on the step-0.05 grid too
+    zne_lambda_window: tuple = (0.05, 0.3)      # ZNE dataset only where it can help (Phase 5)
+    zne_channels: tuple = ("realistic",)
+    sampler_chunk_elements: int = 2 ** 22       # amplitudes held at once by the pure-state sampler
+
+    # Phase 6 validation tolerances
+    exact_tol: float = 1e-10             # identities (energies, strength-0 limits, PSD floor)
+    ff_tol: float = 1e-8                 # ED correlators against free fermions
+    z_frac_max: float = 0.01             # share of shadow z-scores beyond 3 sigma (expected 0.27 %)
+    z_abs_max: float = 6.0               # no shadow z-score beyond this
+    t_frac_max: float = 0.02             # share of |t| > 3 (t with R - 1 dof, expected about 0.7 %)
+    var_ratio_tol: float = 0.1           # |median empirical / analytic shadow variance - 1|
+    snapshot_match_min: float = 0.9999   # noisy strength 0 against noiseless VQE snapshots
 
 
 # ---------------------------------------------------------------------------
@@ -357,3 +382,4 @@ if __name__ == "__main__":
     print("Noise settings:         ", CFG.noise)
     print("Mitigation settings:    ", CFG.mitigation)
     print("Mitigation strengths:   ", CFG.mitigation.strengths())
+    print("ML settings:            ", CFG.ml)
