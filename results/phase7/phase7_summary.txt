@@ -1,0 +1,78 @@
+Phase 7 summary: 11 checks passed, 0 failed, 64 notes
+
+[PASS] C1 free-fermion identity: max |P_ED - P_ff| = 1.1e-14 over N = [4, 6, 8, 10, 12, 14] (both classifiers, feature sets, seeds); max |h_c difference| = 1.7e-15
+[PASS] C2 finite-size drift: ED h_c^ML (LR, exact) = 0.761, 0.798, 0.826, 0.845, 0.860, 0.871 for N = [4, 6, 8, 10, 12, 14]; free fermions to N = 64: 0.761, 0.798, 0.826, 0.845, 0.860, 0.871, 0.878, 0.901, 0.917, 0.928, 0.936; increasing: ED True, ff True; all below h_c: True
+[PASS] C6 PCA tracks M^2: |corr(PC1, M^2)| ED exact = 0.9975, 0.9993, 0.9997, 0.9998, 0.9999, 0.9999; free fermions min 0.9975; PC1 explained variance 0.989, 0.991, 0.991, 0.990, 0.990, 0.990
+[PASS] C5 shadow vs exact h_c^ML (ED, LR): N=4 corr: 0.781 vs 0.761 (tol 0.043); N=4 compact: 0.782 vs 0.752 (tol 0.055); N=6 corr: 0.817 vs 0.798 (tol 0.042); N=6 compact: 0.810 vs 0.775 (tol 0.044); N=8 corr: 0.820 vs 0.826 (tol 0.039); N=8 compact: 0.799 vs 0.795 (tol 0.047); N=10 corr: 0.838 vs 0.845 (tol 0.030); N=10 compact: 0.826 vs 0.812 (tol 0.038); N=12 corr: 0.858 vs 0.860 (tol 0.043); N=12 compact: 0.828 vs 0.824 (tol 0.036); N=14 corr: 0.883 vs 0.871 (tol 0.039); N=14 compact: 0.854 vs 0.834 (tol 0.044)
+[PASS] C9 deep-field accuracy (ED shadows, LR): minimum deep-field accuracy per N = 1.000, 1.000, 1.000, 1.000, 1.000, 1.000
+[PASS] C10b exact logistic is seed independent: largest seed spread of exact LR h_c^ML = 1.1e-16
+[PASS] C3 strength-0 identity: 6 datasets: max |P(noisy, p=0) - P(noiseless VQE)| = 5.6e-15; ED-trained classifier 2.1e-14
+[PASS] C4 readout correction exact at p = 0: 6 datasets: max |P_ro - P_gate| (exact features, p = 0) = 0.0e+00
+[PASS] C8 ZNE restores features and h_c^ML (exact, LR): hea N=4 lambda=0.07: feature error ratio 0.023 (gate) 0.030 (ro); h_c 0.749 -> 0.759 (noiseless 0.760); hea N=4 lambda=0.16: feature error ratio 0.056 (gate) 0.044 (ro); h_c 0.736 -> 0.758 (noiseless 0.760); hea N=6 lambda=0.08: feature error ratio 0.014 (gate) 0.015 (ro); h_c 0.781 -> 0.796 (noiseless 0.796); hea N=6 lambda=0.17: feature error ratio 0.046 (gate) 0.043 (ro); h_c 0.763 -> 0.795 (noiseless 0.796); hea N=8 lambda=0.07: feature error ratio 0.007 (gate) 0.009 (ro); h_c 0.804 -> 0.816 (noiseless 0.816); hea N=8 lambda=0.15: feature error ratio 0.026 (gate) 0.025 (ro); h_c 0.790 -> 0.815 (noiseless 0.816); hva N=4 lambda=0.07: feature error ratio 0.023 (gate) 0.028 (ro); h_c 0.779 -> 0.792 (noiseless 0.793); hva N=4 lambda=0.16: feature error ratio 0.053 (gate) 0.039 (ro); h_c 0.762 -> 0.789 (noiseless 0.793); hva N=6 lambda=0.08: feature error ratio 0.017 (gate) 0.015 (ro); h_c 0.815 -> 0.838 (noiseless 0.838); hva N=6 lambda=0.17: feature error ratio 0.046 (gate) 0.033 (ro); h_c 0.787 -> 0.835 (noiseless 0.838); hva N=8 lambda=0.07: feature error ratio 0.010 (gate) 0.010 (ro); h_c 0.850 -> 0.870 (noiseless 0.870); hva N=8 lambda=0.15: feature error ratio 0.030 (gate) 0.021 (ro); h_c 0.827 -> 0.868 (noiseless 0.870)
+[PASS] C7 shadow rebuild: max |rebuilt - stored| at M = 1000: 0.0e+00 (3 files)
+[PASS] C10 live rerun: ED N = 8, shadows, both classifiers, all seeds: max |P_rerun - P_saved| = 0.0e+00
+
+[note] N-ff: linear 1/N extrapolation of the last three free-fermion sizes ([32, 48, 64]): h_c^ML(inf) = 0.954 (slope -1.18); a fixed-threshold classifier converges below h_c = 1 (hypothesis, see report)
+[note] N-mlp-deep: MLP minimum deep-field accuracy per N = 1.000, 1.000, 1.000, 1.000, 1.000, 1.000
+[note] ED N=4: h_c^ML exact LR/MLP 0.761/0.757; shadows LR 0.781 +- 0.008, MLP 0.776 +- 0.009; window accuracy (shadows) LR 0.762, MLP 0.756; PCA h_mid 0.729, steepest 0.55
+[note] ED N=6: h_c^ML exact LR/MLP 0.798/0.841; shadows LR 0.817 +- 0.007, MLP 0.832 +- 0.021; window accuracy (shadows) LR 0.803, MLP 0.822; PCA h_mid 0.786, steepest 0.70
+[note] ED N=8: h_c^ML exact LR/MLP 0.826/0.851; shadows LR 0.820 +- 0.006, MLP 0.836 +- 0.018; window accuracy (shadows) LR 0.797, MLP 0.828; PCA h_mid 0.819, steepest 0.75
+[note] ED N=10: h_c^ML exact LR/MLP 0.845/0.860; shadows LR 0.838 +- 0.003, MLP 0.854 +- 0.020; window accuracy (shadows) LR 0.812, MLP 0.850; PCA h_mid 0.840, steepest 0.80
+[note] ED N=12: h_c^ML exact LR/MLP 0.860/0.882; shadows LR 0.858 +- 0.008, MLP 0.874 +- 0.015; window accuracy (shadows) LR 0.844, MLP 0.869; PCA h_mid 0.856, steepest 0.85
+[note] ED N=14: h_c^ML exact LR/MLP 0.871/0.890; shadows LR 0.883 +- 0.006, MLP 0.886 +- 0.017; window accuracy (shadows) LR 0.878, MLP 0.897; PCA h_mid 0.868, steepest 0.85
+[note] VQE hea N=4 p=2: h_c^ML shadows LR 0.742, MLP 0.735; ED-trained LR 0.740 (accuracy 0.882)
+[note] VQE hea N=4 p=4: h_c^ML shadows LR 0.817, MLP 0.806; ED-trained LR 0.815 (accuracy 0.901)
+[note] VQE hea N=6 p=3: h_c^ML shadows LR 0.794, MLP 0.834; ED-trained LR 0.792 (accuracy 0.921)
+[note] VQE hea N=6 p=6: h_c^ML shadows LR 0.804, MLP 0.827; ED-trained LR 0.801 (accuracy 0.914)
+[note] VQE hea N=8 p=4: h_c^ML shadows LR 0.835, MLP 0.854; ED-trained LR 0.837 (accuracy 0.928)
+[note] VQE hea N=8 p=8: h_c^ML shadows LR 0.838, MLP 0.861; ED-trained LR 0.840 (accuracy 0.925)
+[note] VQE hea N=10 p=5: h_c^ML shadows LR 0.841, MLP 0.849; ED-trained LR 0.837 (accuracy 0.928)
+[note] VQE hea N=10 p=10: h_c^ML shadows LR 0.838, MLP 0.852; ED-trained LR 0.840 (accuracy 0.928)
+[note] VQE hea N=12 p=6: h_c^ML shadows LR 0.874, MLP 0.877; ED-trained LR 0.874 (accuracy 0.947)
+[note] VQE hea N=12 p=12: h_c^ML shadows LR 0.871, MLP 0.876; ED-trained LR 0.872 (accuracy 0.947)
+[note] VQE hva N=4 p=2: h_c^ML shadows LR 0.799, MLP 0.799; ED-trained LR 0.632 (accuracy 0.813)
+[note] VQE hva N=4 p=4: h_c^ML shadows LR 0.803, MLP 0.790; ED-trained LR 0.803 (accuracy 0.896)
+[note] VQE hva N=6 p=3: h_c^ML shadows LR 0.855, MLP 0.868; ED-trained LR 0.589 (accuracy 0.796)
+[note] VQE hva N=6 p=6: h_c^ML shadows LR 0.820, MLP 0.826; ED-trained LR 0.811 (accuracy 0.909)
+[note] VQE hva N=8 p=4: h_c^ML shadows LR 0.872, MLP 0.888; ED-trained LR 0.607 (accuracy 0.814)
+[note] VQE hva N=8 p=8: h_c^ML shadows LR 0.833, MLP 0.846; ED-trained LR 0.829 (accuracy 0.921)
+[note] VQE hva N=10 p=5: h_c^ML shadows LR 0.918, MLP 0.925; ED-trained LR 0.589 (accuracy 0.796)
+[note] VQE hva N=10 p=10: h_c^ML shadows LR 0.841, MLP 0.859; ED-trained LR 0.836 (accuracy 0.928)
+[note] VQE hva N=12 p=6: h_c^ML shadows LR 0.918, MLP 0.949; ED-trained LR 0.660 (accuracy 0.830)
+[note] VQE hva N=12 p=12: h_c^ML shadows LR 0.865, MLP 0.882; ED-trained LR 0.855 (accuracy 0.937)
+[note] noise hea N=4 ro clean_ed: LR shadows h_c^ML 0.743 (p = 0) -> 0.702 (p = 1e-02); first 2-sigma drift at none; accuracy 0.882 -> 0.849; no crossing at 0 strengths
+[note] noise hea N=4 ro clean_vqe: LR shadows h_c^ML 0.745 (p = 0) -> 0.707 (p = 1e-02); first 2-sigma drift at none; accuracy 0.884 -> 0.858; no crossing at 0 strengths
+[note] noise hea N=4 ro noisy: LR shadows h_c^ML 0.746 (p = 0) -> 0.733 (p = 1e-02); first 2-sigma drift at none; accuracy 0.883 -> 0.884; no crossing at 0 strengths
+[note] noise hea N=4 ro mixed: LR shadows h_c^ML 0.766 (p = 0) -> 0.732 (p = 1e-02); first 2-sigma drift at none; accuracy 0.892 -> 0.884; no crossing at 0 strengths
+[note] noise hea N=4 ro loo: LR shadows h_c^ML 0.766 (p = 0) -> 0.735 (p = 1e-02); first 2-sigma drift at none; accuracy 0.892 -> 0.888; no crossing at 0 strengths
+[note] noise hea N=6 ro clean_ed: LR shadows h_c^ML 0.791 (p = 0) -> nan (p = 1e-02); first 2-sigma drift at p = 0.0046 (lambda = 0.81); accuracy 0.908 -> 0.579; no crossing at 1 strengths
+[note] noise hea N=6 ro clean_vqe: LR shadows h_c^ML 0.793 (p = 0) -> 0.170 (p = 1e-02); first 2-sigma drift at p = 0.0046 (lambda = 0.81); accuracy 0.914 -> 0.591; no crossing at 0 strengths
+[note] noise hea N=6 ro noisy: LR shadows h_c^ML 0.793 (p = 0) -> 0.791 (p = 1e-02); first 2-sigma drift at none; accuracy 0.914 -> 0.916; no crossing at 0 strengths
+[note] noise hea N=6 ro mixed: LR shadows h_c^ML 0.796 (p = 0) -> 0.788 (p = 1e-02); first 2-sigma drift at none; accuracy 0.924 -> 0.914; no crossing at 0 strengths
+[note] noise hea N=6 ro loo: LR shadows h_c^ML 0.797 (p = 0) -> 0.759 (p = 1e-02); first 2-sigma drift at none; accuracy 0.925 -> 0.878; no crossing at 0 strengths
+[note] noise hea N=8 ro clean_ed: LR shadows h_c^ML 0.838 (p = 0) -> nan (p = 1e-02); first 2-sigma drift at p = 0.00046 (lambda = 0.15); accuracy 0.932 -> 0.526; no crossing at 1 strengths
+[note] noise hea N=8 ro clean_vqe: LR shadows h_c^ML 0.837 (p = 0) -> nan (p = 1e-02); first 2-sigma drift at p = 0.001 (lambda = 0.32); accuracy 0.930 -> 0.526; no crossing at 1 strengths
+[note] noise hea N=8 ro noisy: LR shadows h_c^ML 0.837 (p = 0) -> 0.796 (p = 1e-02); first 2-sigma drift at none; accuracy 0.930 -> 0.908; no crossing at 0 strengths
+[note] noise hea N=8 ro mixed: LR shadows h_c^ML 0.849 (p = 0) -> 0.810 (p = 1e-02); first 2-sigma drift at p = 0.0046 (lambda = 1.49); accuracy 0.934 -> 0.907; no crossing at 0 strengths
+[note] noise hea N=8 ro loo: LR shadows h_c^ML 0.851 (p = 0) -> 0.741 (p = 1e-02); first 2-sigma drift at p = 0.0046 (lambda = 1.49); accuracy 0.934 -> 0.870; no crossing at 0 strengths
+[note] noise hva N=4 ro clean_ed: LR shadows h_c^ML 0.623 (p = 0) -> 0.432 (p = 1e-02); first 2-sigma drift at p = 0.0046 (lambda = 0.33); accuracy 0.805 -> 0.743; no crossing at 0 strengths
+[note] noise hva N=4 ro clean_vqe: LR shadows h_c^ML 0.815 (p = 0) -> 0.761 (p = 1e-02); first 2-sigma drift at none; accuracy 0.917 -> 0.883; no crossing at 0 strengths
+[note] noise hva N=4 ro noisy: LR shadows h_c^ML 0.814 (p = 0) -> 0.820 (p = 1e-02); first 2-sigma drift at none; accuracy 0.914 -> 0.907; no crossing at 0 strengths
+[note] noise hva N=4 ro mixed: LR shadows h_c^ML 0.814 (p = 0) -> 0.823 (p = 1e-02); first 2-sigma drift at none; accuracy 0.916 -> 0.907; no crossing at 0 strengths
+[note] noise hva N=4 ro loo: LR shadows h_c^ML 0.814 (p = 0) -> 0.827 (p = 1e-02); first 2-sigma drift at none; accuracy 0.914 -> 0.917; no crossing at 0 strengths
+[note] noise hva N=6 ro clean_ed: LR shadows h_c^ML 0.585 (p = 0) -> nan (p = 1e-02); first 2-sigma drift at p = 0.0022 (lambda = 0.37); accuracy 0.796 -> 0.526; no crossing at 1 strengths
+[note] noise hva N=6 ro clean_vqe: LR shadows h_c^ML 0.857 (p = 0) -> 0.400 (p = 1e-02); first 2-sigma drift at p = 0.001 (lambda = 0.17); accuracy 0.926 -> 0.705; no crossing at 0 strengths
+[note] noise hva N=6 ro noisy: LR shadows h_c^ML 0.857 (p = 0) -> 0.790 (p = 1e-02); first 2-sigma drift at p = 0.01 (lambda = 1.74); accuracy 0.929 -> 0.893; no crossing at 0 strengths
+[note] noise hva N=6 ro mixed: LR shadows h_c^ML 0.850 (p = 0) -> 0.788 (p = 1e-02); first 2-sigma drift at p = 0.0022 (lambda = 0.37); accuracy 0.934 -> 0.889; no crossing at 0 strengths
+[note] noise hva N=6 ro loo: LR shadows h_c^ML 0.850 (p = 0) -> 0.794 (p = 1e-02); first 2-sigma drift at p = 0.0022 (lambda = 0.37); accuracy 0.934 -> 0.892; no crossing at 0 strengths
+[note] noise hva N=8 ro clean_ed: LR shadows h_c^ML 0.608 (p = 0) -> nan (p = 1e-02); first 2-sigma drift at p = 0.00046 (lambda = 0.15); accuracy 0.809 -> 0.526; no crossing at 2 strengths
+[note] noise hva N=8 ro clean_vqe: LR shadows h_c^ML 0.873 (p = 0) -> nan (p = 1e-02); first 2-sigma drift at p = 0.001 (lambda = 0.32); accuracy 0.950 -> 0.526; no crossing at 1 strengths
+[note] noise hva N=8 ro noisy: LR shadows h_c^ML 0.872 (p = 0) -> 0.802 (p = 1e-02); first 2-sigma drift at p = 0.01 (lambda = 3.20); accuracy 0.950 -> 0.934; no crossing at 0 strengths
+[note] noise hva N=8 ro mixed: LR shadows h_c^ML 0.867 (p = 0) -> 0.816 (p = 1e-02); first 2-sigma drift at p = 0.0022 (lambda = 0.69); accuracy 0.942 -> 0.941; no crossing at 0 strengths
+[note] noise hva N=8 ro loo: LR shadows h_c^ML 0.869 (p = 0) -> 0.982 (p = 1e-02); first 2-sigma drift at p = 0.0022 (lambda = 0.69); accuracy 0.942 -> 0.951; no crossing at 0 strengths
+[note] shots ed: LR h_c^ML vs M = 100: 0.845, 250: 0.827, 500: 0.829, 1000: 0.820; shot-noise SE slope in log M = -0.56 (expected -0.5)
+[note] shots hva: LR h_c^ML vs M = 100: 0.825, 250: 0.886, 500: 0.880, 1000: 0.872; shot-noise SE slope in log M = -0.35 (expected -0.5)
+[note] shots hea: LR h_c^ML vs M = 100: 0.871, 250: 0.844, 500: 0.832, 1000: 0.837; shot-noise SE slope in log M = -0.27 (expected -0.5)
+[note] learning ed: LR accuracy vs training rows 22: 0.913, 44: 0.914, 88: 0.914, 176: 0.914, 352: 0.914
+[note] learning hva: LR accuracy vs training rows 22: 0.939, 44: 0.943, 88: 0.945, 176: 0.949, 352: 0.954
+[note] learning hea: LR accuracy vs training rows 22: 0.920, 44: 0.924, 88: 0.924, 176: 0.926, 352: 0.934
