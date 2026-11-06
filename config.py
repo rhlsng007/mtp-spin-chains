@@ -327,6 +327,36 @@ class MLConfig:
     var_ratio_tol: float = 0.1           # |median empirical / analytic shadow variance - 1|
     snapshot_match_min: float = 0.9999   # noisy strength 0 against noiseless VQE snapshots
 
+    # Phase 7: classification (T7.1 to T7.6)
+    classifiers: tuple = ("logistic", "mlp")
+    feature_sets_phase7: tuple = ("corr", "compact")
+    logistic_C: float = 1.0              # inverse L2 strength (standardized features)
+    logistic_max_iter: int = 5000
+    mlp_alpha: float = 1e-3              # MLP L2 penalty
+    mlp_batch_size: int = 64
+    mlp_early_stopping: bool = False     # off: on separable data validation accuracy saturates at 1
+                                         # within a few epochs and stops an untrained network
+    mlp_validation_fraction: float = 0.15
+    mlp_patience: int = 30               # epochs without improvement before stopping
+    bootstrap_training: bool = True      # seed-dependent bootstrap of the training shadows
+    decision_threshold: float = 0.5      # p(y = 1 | x) = 1/2 defines h_c^ML
+    noise_modes: tuple = ("clean_ed", "clean_vqe", "noisy", "mixed", "loo")
+    default_variant: str = "ro"          # Phase 6 decision: readout-corrected shadows
+    pca_components: int = 3
+    ff_sizes: tuple = (4, 6, 8, 10, 12, 14, 16, 24, 32, 48, 64)   # free-fermion exact features
+    study_size: int = 8                  # N of the shots test, learning curve and central figure
+    shots_list: tuple = (100, 250, 500, 1000)
+    shots_strength_indices: tuple = (0, 4, 7, 10)          # p = 0, 1e-4, 1e-3, 1e-2
+    learning_reps: tuple = (1, 2, 4, 8, 16)                # training shadows per training field
+    learning_strength_indices: tuple = (0, 7, 10)
+
+    # Phase 7 validation tolerances
+    identity_tol: float = 1e-8           # classifier outputs of identical inputs
+    pca_corr_min: float = 0.995          # |corr(PC1, exact M^2)| for ED exact features
+    hc_sigma: float = 3.0                # shadow vs exact h_c^ML agreement, in combined sigma ...
+    hc_floor: float = 0.02               # ... plus this floor (grid step 0.05)
+
+
 
 # ---------------------------------------------------------------------------
 # Reproducibility
