@@ -21,10 +21,13 @@ the Eckart-Young bound F_GS <= sum of the 2^p largest Schmidt weights.
 
 Validation
   * Rank bound for S and S_2 (all N, p, h, cuts, both ansaetze).
-  * Fannes-Audenaert bound at the half cut, evaluated to the precision with
-    which 1 - F is known (relative allowance INFIDELITY_ULP / (1 - F), with
-    1 - F floored at CFG.ent.fidelity_resolution as in Phase 3); Eckart-Young
-    bound on F_GS.
+  * The stored Fannes-Audenaert bounds equal T ln(d-1) + H2(T) wherever 1 - F
+    is resolved (the Phase 3 bound was saved without its fidelity floor).
+  * Fannes-Audenaert bound at the half cut, recomputed with 1 - F floored at
+    CFG.ent.fidelity_resolution as in the Phase 3 check (S is not Lipschitz
+    near F = 1, so infidelities below double precision still move S), and
+    evaluated to the precision with which 1 - F is known (relative allowance
+    INFIDELITY_ULP / (1 - F)); Eckart-Young bound on F_GS.
   * The ED even-state half-chain entropy equals the Phase 1 value.
   * Capacity: S2_max = p ln 2 for every p < N/2 (the rank bound is reached),
     and S2_max <= min(p, N/2) ln 2 for every p.
@@ -66,6 +69,18 @@ LN2 = np.log(2.0)
 INFIDELITY_ULP = 4.0 * np.finfo(float).eps
 
 
+def audenaert_bound(infidelity, n_qubits: int):
+    """
+    Fannes-Audenaert bound at the half cut, d = 2^(N/2), T = sqrt(1 - F):
+    T ln(d - 1) + H2(T) for T < 1 - 1/d, ln d otherwise (H2 in nats).
+    """
+    d = 2.0 ** (n_qubits // 2)
+    T = np.sqrt(np.clip(np.asarray(infidelity, dtype=float), 0.0, 1.0))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        h2 = np.where((T > 0) & (T < 1), -T * np.log(T) - (1 - T) * np.log1p(-T), 0.0)
+    return np.where(T < 1 - 1 / d, T * np.log(d - 1) + h2, np.log(d))
+
+
 def build(ctx):
     th, tol = CFG.thesis, CFG.ent.bound_tol
     sizes, Np = list(th.vqe_sizes), th.ent_size
@@ -81,8 +96,8 @@ def build(ctx):
     ctx.param(plot_size=Np, sizes=sizes, depths_drawn=[Np // 2, Np], bound_tol=tol)
 
     # -- validation ------------------------------------------------------------
-    rank_slack, fa_slack, ey_slack = [], [], []
-    fa_raw, fa_worst = 0, None
+    rank_slack, fa_slack, ey_slack, fa_formula = [], [], [], []
+    fa_raw, fa_zero, fa_worst = 0, 0, None
     floor = CFG.ent.fidelity_resolution
     for a, _ in ANSATZE:
         for N in sizes:
@@ -94,26 +109,41 @@ def build(ctx):
                 rank_slack.append(np.max(np.asarray(d[key]) - cap[:, None, :]))
             half = N // 2 - 1
             dS = np.abs(np.asarray(d["S"])[:, :, half] - np.asarray(d["S_ref"])[:, :, half])
-            bnd = np.asarray(d["audenaert"])
-            x = np.maximum(1.0 - np.asarray(d["fidelity_gs"]), floor)
+            stored = np.asarray(d["audenaert"])
+            infid = 1.0 - np.asarray(d["fidelity_gs"])
+            T_sat = 1.0 - 1.0 / 2.0 ** (N // 2)
+            resolved = (infid > 100 * floor) & (np.sqrt(np.clip(infid, 0, 1)) < T_sat)
+            if resolved.any():
+                ref = audenaert_bound(infid[resolved], N)
+                rel = np.abs(stored[resolved] - ref) / ref
+                fa_formula.append(np.max(rel - INFIDELITY_ULP / infid[resolved]))
+            fa_zero += int(np.sum(stored == 0))
+            x = np.maximum(infid, floor)              # Phase 3 floor on 1 - F
+            bnd = audenaert_bound(x, N)
             allowed = bnd * (1.0 + INFIDELITY_ULP / x)
             excess = dS - allowed
             fa_slack.append(np.max(excess))
-            fa_raw += int(np.sum(dS - bnd > tol))
-            k = np.unravel_index(np.argmax(dS - bnd), dS.shape)
-            cand = (float((dS - bnd)[k]), a, N, int(p[k[0]]), float(d["h"][k[1]]), float(x[k]),
+            fa_raw += int(np.sum(dS - stored > tol))
+            k = np.unravel_index(np.argmax(dS / allowed), dS.shape)
+            cand = (float(dS[k] / allowed[k]), a, N, int(p[k[0]]), float(d["h"][k[1]]), float(x[k]),
                     float(dS[k]), float(bnd[k]))
             if fa_worst is None or cand[0] > fa_worst[0]:
                 fa_worst = cand
             ey_slack.append(np.max(np.asarray(d["fidelity_gs"]) - d["rank_fidelity_bound"]))
     ctx.check_max("rank bound S_alpha(l) <= min(p, l, N-l) ln 2 (S and S_2, all states, cuts)",
                   rank_slack, tol)
+    ctx.check_max("stored Fannes-Audenaert bound equals T ln(d-1) + H2(T) where 1 - F is resolved",
+                  fa_formula, 1e-8, detail="relative difference beyond the double-precision allowance of 1 - F; "
+                         "points with 1 - F > 100 x floor and T < 1 - 1/d")
     ex, a_w, n_w, p_w, h_w, x_w, ds_w, b_w = fa_worst
     ctx.check_max("Fannes-Audenaert bound on |S_VQE - S_ref| at the half cut "
-                  "(bound evaluated to double precision of 1 - F)", fa_slack, tol,
+                  "(1 - F floored at the Phase 3 resolution, known to double precision)",
+                  fa_slack, tol,
                   detail=f"closest point {a_w.upper()} N={n_w} p={p_w} h={h_w:g}: 1-F={x_w:.2e}, "
-                         f"|dS|={ds_w:.3e}, bound={b_w:.3e}; {fa_raw} points exceed the stored "
-                         f"bound by more than {tol:g} before the precision allowance")
+                         f"|dS|={ds_w:.3e}, bound={b_w:.3e}")
+    ctx.note(f"Fannes-Audenaert: {fa_zero} states with F_GS = 1 to double precision (stored bound 0); "
+             f"{fa_raw} states exceed the unfloored stored bound by more than {tol:g}, all resolved by "
+             f"the Phase 3 floor 1 - F >= {floor:g}")
     ctx.check_max("Eckart-Young bound F_GS <= sum of the 2^p largest Schmidt weights", ey_slack, tol)
     dev = [np.max(np.abs(np.asarray(ed[N]["S_even"])[:, N // 2 - 1] - ph1[N]["S_half"])) for N in sizes]
     ctx.check_max("ED even-state S(N/2) equals the Phase 1 value", dev, th.identity_tol)
