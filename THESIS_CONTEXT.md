@@ -340,7 +340,7 @@ $$
 | 5 | Error mitigation: readout correction, ZNE with gate folding | **Done** |
 | 6 | ML datasets: correlators, classical shadows, clean and noisy | **Done** |
 | 7 | ML: logistic regression, MLP, PCA, optional QCNN, cross-noise tests | **Done** (QCNN skipped) |
-| 8 | Figures, reproducibility, writing | **Next** |
+| 8 | Figures, reproducibility, writing | **Done** (thesis writing follows) |
 
 ## 8. Phase 1: completed
 
@@ -662,7 +662,7 @@ $$
 
 ## 14. Phase 7: completed
 
-**Status:** done; merged into `main` with tag `phase7-complete` (merge hash: `git rev-parse --short phase7-complete`), `phase8-complete` (<P8_MERGE>). Code at 87d4b42 (results produced at this commit); results, figures, summary and tables in 9b4a766. `pytest -q`: 364 tests pass (14 for Phase 7). `experiments\phase7_plots.py`: 11 checks passed, 0 failed, 64 notes. Report: the Claude Doc "Phase 7: Machine-Learning Phase Classification of the Transverse-Field Ising Chain under Noise" (https://claude.ai/artifact/9zsruXJk6he4vvVPiGg7YA). T7.5 (QCNN on the cluster-Ising model) skipped by decision; optional future work.
+**Status:** done; merged into `main` with tag `phase7-complete` (merge hash: `git rev-parse --short phase7-complete`). Code at 87d4b42 (results produced at this commit); results, figures, summary and tables in 9b4a766. `pytest -q`: 364 tests pass (14 for Phase 7). `experiments\phase7_plots.py`: 11 checks passed, 0 failed, 64 notes. Report: the Claude Doc "Phase 7: Machine-Learning Phase Classification of the Transverse-Field Ising Chain under Noise" (https://claude.ai/artifact/9zsruXJk6he4vvVPiGg7YA). T7.5 (QCNN on the cluster-Ising model) skipped by decision; optional future work.
 
 **How to run (from the project root, after Phase 6):**
 
@@ -722,7 +722,7 @@ $$
 
 ## 15. Phase 8: completed
 
-**Status:** done; merged into `main` at <P8_MERGE>, tag `phase8-complete`. Last code commit before the merge: the Results notes (1288dc2). `pytest -q`: 404 tests pass (31 in `test_phase8.py`, 9 in `test_phase8_notes.py`). `python experiments\make_thesis_figures.py`: 16 thesis figures, 146 checks passed, 0 failed, about 8 s; a rerun leaves the committed PDFs and the manifest byte-identical. Report: the Claude Doc "Phase 8: Results Consolidation".
+**Status:** done; merged into `main` at <P8_MERGE>, tag `phase8-complete`. Last commits before the merge: the Results notes (1288dc2) and this context update (64e3565). `pytest -q`: 404 tests pass (31 in `test_phase8.py`, 9 in `test_phase8_notes.py`). `python experiments\make_thesis_figures.py`: 16 thesis figures, 146 checks passed, 0 failed, about 8 s; a rerun leaves the committed PDFs and the manifest byte-identical. Report: the Claude Doc "Phase 8: Results Consolidation".
 
 **How to run (from the project root, after Phases 1 to 7):**
 
