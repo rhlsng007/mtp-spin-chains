@@ -166,7 +166,7 @@ def build(ctx):
     labels = ["energy witness lost", "hashing bound lost", "entanglement sudden death",
               "readout + ZNE above VQE error", "drift: trained on ED", "drift: trained on noiseless circuit",
               "drift: trained on mixed noise"]
-    fig, ax = thesis_figure(ncols=1, width="full", aspect=0.42)
+    fig, ax = thesis_figure(ncols=1, width="full", aspect=0.48)
     y = np.arange(len(labels))[::-1]
     ax.axvspan(lo, hi, color=COLORS["grey"], alpha=0.18, lw=0, zorder=0)
     ax.axvspan(zw.min(), zw.max(), facecolor="none", edgecolor=COLORS["grey"], hatch="////", lw=0, zorder=0)
@@ -192,15 +192,13 @@ def build(ctx):
     ax.set_xlabel(r"error budget $\lambda$ (expected gate errors per circuit), $N=8$, $p=4$, $h=J$")
     for txt, row in (("Phase 4", y[1]), ("Phase 5", y[3]), ("Phase 7", y[5])):
         ax.text(1.01, row, txt, transform=ax.get_yaxis_transform(), ha="left", va="center", rotation=90)
-    hs = [ax.plot([], [], ANSATZ_MARKERS[n], color=COLORS["black"], ms=4.5, label=f"{lab}: {n}")[0]
-          for n, lab in (("HVA", "circles"), ("HEA", "squares"))]
-    leg = ax.legend(handles=hs, loc="lower right")
-    ax.add_artist(leg)
-    hc_ = [ax.plot([], [], "s", color=CHANNEL_COLORS[ch], ms=4.5, label=lab)[0]
-           for ch, lab in (("depolarizing", "depolarizing"), ("amplitude_damping", "amplitude damping"),
-                           ("dephasing", "dephasing"))]
-    ax.legend(handles=hc_, loc="lower left", title="Phase 4 channel", frameon=True, framealpha=1.0,
-              edgecolor="none")
+    hs = [ax.plot([], [], "s", color=CHANNEL_COLORS[ch], ms=4.5, label=lab)[0]
+          for ch, lab in (("depolarizing", "depolarizing"), ("amplitude_damping", "amplitude damping"),
+                          ("dephasing", "dephasing"))]
+    hs += [ax.plot([], [], ANSATZ_MARKERS[n], color=COLORS["black"], ms=4.5, label=f"{lab}: {n}")[0]
+           for n, lab in (("HVA", "circles"), ("HEA", "squares"))]
+    fig.legend(handles=hs, loc="outside lower center", ncol=5, columnspacing=1.2,
+               title="Phase 4 noise channel (colour) and ansatz (marker)")
     return fig
 
 

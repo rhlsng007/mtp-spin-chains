@@ -156,7 +156,7 @@ def build(ctx):
     ax.set_xlim(h.min(), h.max())
     ax.set_xlabel(r"$h/J$")
     ax.set_ylabel(r"$P(h)$, logistic regression")
-    ax.legend(loc="center right", ncol=2, columnspacing=0.8)
+    ax.legend(loc="center right", ncol=1, frameon=True, framealpha=1.0, edgecolor="none")
 
     ax = axes[1]
     inv = lambda n: 1.0 / np.asarray(n, dtype=float)  # noqa: E731
@@ -174,22 +174,31 @@ def build(ctx):
     ax.set_ylim(lo - 0.02, 1.06)
     ax.set_xlabel(r"$1/N$")
     ax.set_ylabel(r"$h_c^{\mathrm{ML}}/J$")
-    ax.legend(loc="center right")
+    ax.legend(loc="upper right", frameon=True, framealpha=1.0, edgecolor=COLORS["grey"], fancybox=False)
 
     ax = axes[2]
-    ax.plot(vsizes, [stats[N]["mean"][sh, fc, lr] for N in vsizes], "-", color=SERIES_COLORS["ED"], lw=0.9,
-            label="ED, same $N$")
+    ax.plot(vsizes, [stats[N]["mean"][sh, fc, lr] for N in vsizes], "-", color=SERIES_COLORS["ED"], lw=0.9)
     for a, name in (("hva", "HVA"), ("hea", "HEA")):
         for p_rule, mfc in (("N/2", "none"), ("N", None)):
             st = [summarize_hc(vqe[a, N, N // 2 if p_rule == "N/2" else N]["ed_hc"],
                                vqe[a, N, N // 2 if p_rule == "N/2" else N]["ed_hc_rep"]) for N in vsizes]
             ax.errorbar(vsizes, [s["mean"][sh, fc, lr] for s in st], yerr=[s["total"][sh, fc, lr] for s in st],
                         fmt=ANSATZ_MARKERS[name] + ("--" if p_rule == "N/2" else "-"), color=SERIES_COLORS[name],
-                        ms=3.5, mfc=mfc, lw=0.9, label=f"{name}, $p={p_rule}$")
+                        ms=3.5, mfc=mfc, lw=0.9)
+    hs = [ax.plot([], [], "-", color=SERIES_COLORS["ED"], lw=0.9, label="ED, same $N$")[0],
+          ax.plot([], [], ANSATZ_MARKERS["HVA"] + "-", color=SERIES_COLORS["HVA"], ms=3.5, label="HVA")[0],
+          ax.plot([], [], ANSATZ_MARKERS["HEA"] + "-", color=SERIES_COLORS["HEA"], ms=3.5, label="HEA")[0],
+          ax.plot([], [], "o--", color=COLORS["black"], ms=3.5, mfc="none", lw=0.9, label="open: $p=N/2$")[0],
+          ax.plot([], [], "o-", color=COLORS["black"], ms=3.5, lw=0.9, label="filled: $p=N$")[0]]
+    lo, hi = ax.get_ylim()
+    ticks = [t for t in ax.get_yticks() if lo <= t <= hi]
+    ax.set_ylim(lo, hi + 0.45 * (hi - lo))           # free band above the data for the legend
+    ax.set_yticks(ticks)                             # no ticks inside the legend band
     ax.set_xticks(vsizes)
     ax.set_xlabel("$N$")
     ax.set_ylabel(r"$h_c^{\mathrm{ML}}/J$, trained on ED")
-    ax.legend(loc="center", ncol=2, columnspacing=0.8, handlelength=1.6)
+    ax.legend(handles=hs, loc="upper center", ncol=2, columnspacing=0.6, handlelength=1.3,
+              borderaxespad=0.2)
     panel_labels(axes)
     return fig
 
