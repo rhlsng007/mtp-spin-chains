@@ -722,7 +722,7 @@ $$
 
 ## 15. Phase 8: completed
 
-**Status:** done; merged into `main` at <P8_MERGE>, tag `phase8-complete`. Last commits before the merge: the Results notes (1288dc2) and this context update (64e3565). `pytest -q`: 404 tests pass (31 in `test_phase8.py`, 9 in `test_phase8_notes.py`). `python experiments\make_thesis_figures.py`: 16 thesis figures, 146 checks passed, 0 failed, about 8 s; a rerun leaves the committed PDFs and the manifest byte-identical. Report: the Claude Doc "Phase 8: Results Consolidation".
+**Status:** done; merged into `main` at 7e2004f, tag `phase8-complete`. Last commits before the merge: the Results notes (1288dc2) and this context update (64e3565). `pytest -q`: 404 tests pass (31 in `test_phase8.py`, 9 in `test_phase8_notes.py`). `python experiments\make_thesis_figures.py`: 16 thesis figures, 146 checks passed, 0 failed, about 8 s; a rerun leaves the committed PDFs and the manifest byte-identical. Report: the Claude Doc "Phase 8: Results Consolidation".
 
 **How to run (from the project root, after Phases 1 to 7):**
 
