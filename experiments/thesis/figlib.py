@@ -470,3 +470,30 @@ def drift_onset(mean, total, strengths, n_sigma: float = 2.0) -> int:
         drift = np.abs(mean - mean[0]) > n_sigma * np.sqrt(total ** 2 + total[0] ** 2)
     hit = np.flatnonzero(drift & (np.asarray(strengths) > 0))
     return int(hit[0]) if hit.size else -1
+
+
+def isotonic_ends(P):
+    """
+    First and last value of the non-decreasing isotonic (pool adjacent
+    violators) fit of P along the last axis, in closed form: the minimum of the
+    prefix means and the maximum of the suffix means.
+    """
+    P = np.asarray(P, dtype=float)
+    n = P.shape[-1]
+    k = np.arange(1, n + 1)
+    prefix = np.cumsum(P, axis=-1) / k
+    suffix = np.cumsum(P[..., ::-1], axis=-1)[..., ::-1] / k[::-1]
+    return prefix.min(axis=-1), suffix.max(axis=-1)
+
+
+def crossing_consistent(hc, P, threshold: float = 0.5) -> tuple:
+    """
+    Check the Phase 7 estimator: h_c^ML is missing (NaN) exactly when the
+    isotonic fit of the field-averaged output P never crosses the threshold.
+    Returns (number of inconsistent entries, number of missing crossings).
+    """
+    lo, hi = isotonic_ends(P)
+    with np.errstate(invalid="ignore"):
+        crosses = (lo < threshold) & (hi >= threshold)
+    missing = ~np.isfinite(np.asarray(hc, dtype=float))
+    return int(np.sum(crosses == missing)), int(missing.sum())

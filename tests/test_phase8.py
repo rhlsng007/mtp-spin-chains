@@ -337,3 +337,20 @@ def test_drift_onset_phase7_rule():
     tot = np.full(4, 0.01)
     assert drift_onset(mean, tot, s) == 2                          # 0.05 > 2 sqrt(2) 0.01
     assert drift_onset(np.array([0.85, 0.85, 0.85, np.nan]), tot, s) == -1   # no crossing is not drift
+
+
+def test_isotonic_ends_match_sklearn_and_crossing_rule():
+    from sklearn.isotonic import IsotonicRegression
+    from experiments.thesis.figlib import crossing_consistent, isotonic_ends
+    rng = np.random.default_rng(5)
+    P = rng.random((50, 39))
+    lo, hi = isotonic_ends(P)
+    x = np.arange(39)
+    for k in range(50):
+        fit = IsotonicRegression().fit_transform(x, P[k])
+        assert lo[k] == pytest.approx(fit[0], abs=1e-12) and hi[k] == pytest.approx(fit[-1], abs=1e-12)
+    above = np.full((1, 39), 0.7)
+    rising = np.linspace(0.1, 0.9, 39)[None]
+    assert crossing_consistent(np.array([np.nan]), above) == (0, 1)
+    assert crossing_consistent(np.array([0.9]), rising) == (0, 0)
+    assert crossing_consistent(np.array([np.nan]), rising) == (1, 1)

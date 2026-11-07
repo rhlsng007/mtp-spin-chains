@@ -25,8 +25,8 @@ Validation
     classifiers: train = test noise equals the noiseless-circuit mode, and the
     ED-trained mode equals the ED-trained classifier on the noiseless circuit.
   * Readout correction is exact at zero noise for exact features ("ro" = "gate").
-  * No crossing means every field is assigned to one phase: accuracy 20/38
-    (all disordered) or 18/38 (all ordered).
+  * h_c^ML is missing exactly when the isotonic fit of the field-averaged output
+    never crosses 1/2 (closed-form ends of the pool-adjacent-violators fit).
   * Means and total uncertainties equal noise_accuracy.csv (4 decimals).
   * Drift onsets reproduce the Phase 7 results (N = 8).
 """
@@ -39,7 +39,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import numpy as np
 
 from config import CFG
-from experiments.thesis.figlib import (FigureSpec, drift_onset, run_figure, summarize_hc, table_value)
+from experiments.thesis.figlib import (FigureSpec, crossing_consistent, drift_onset, run_figure, summarize_hc,
+                                       table_value)
 from utils.plotting import (MODE_COLORS, MODE_LABELS, COLORS, label_zero_strength, panel_labels,
                             reference_line, size_color, thesis_figure, zero_strength_positions)
 
@@ -111,14 +112,17 @@ def build(ctx):
     ctx.check_max("zero noise: ED-trained classifier on noisy data equals it on the noiseless circuit", z2,
                   ml.identity_tol)
     ctx.check_max("zero noise: readout correction exact for exact features (ro = gate)", z3, ml.identity_tol)
-    bad = 0
+    bad, miss, acc_miss = 0, 0, []
+    thr = getattr(ml, "decision_threshold", 0.5)
     for d in noise.values():
-        hc, acc = np.asarray(d["hc"]), np.asarray(d["acc"])
-        sel = ~np.isfinite(hc)
-        a = acc[sel]
-        bad += int(np.sum(~(np.isclose(a, ALL_DISORDERED) | np.isclose(a, ALL_ORDERED))))
-    ctx.check_true("no crossing <=> one phase everywhere: accuracy 20/38 or 18/38", bad == 0,
-                   f"{bad} exceptions")
+        b, m = crossing_consistent(d["hc"], d["P"], thr)
+        bad, miss = bad + b, miss + m
+        acc_miss.append(np.asarray(d["acc"])[~np.isfinite(np.asarray(d["hc"]))])
+    acc_miss = np.concatenate(acc_miss)
+    ctx.check_true("missing h_c^ML <=> the isotonic fit of P(h) never crosses 1/2 (every entry)", bad == 0,
+                   f"{bad} inconsistent of {sum(np.asarray(d['hc']).size for d in noise.values())}; {miss} missing")
+    ctx.note(f"accuracy where no crossing: {acc_miss.min():.3f} to {acc_miss.max():.3f}, median "
+             f"{np.median(acc_miss):.3f} (20/38 = {ALL_DISORDERED:.3f}: every shadow called disordered)")
 
     stats = {key: summarize_hc(d["hc"], d["hc_rep"]) for key, d in noise.items()}
     mine, theirs = [], []

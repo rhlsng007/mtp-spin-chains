@@ -13,8 +13,8 @@ Panels
       (classifier trained on the noiseless circuit), N = 4, 6, 8, both ansaetze
 
 Validation
-  * Accuracy in [0, 1]; where a classifier finds no crossing its accuracy is
-    20/38 or 18/38 (one phase everywhere).
+  * Accuracy in [0, 1]; h_c^ML is missing exactly when the isotonic fit of the
+    field-averaged output never crosses 1/2.
   * ZNE removes at least 1 - CFG.thesis.zne_feature_ratio_max of the exact
     feature error at every window point (feature RMS to the noiseless circuit).
   * Zero-noise extrapolation uses the Phase 5 Richardson weights (15/8, -5/4, 3/8).
@@ -29,7 +29,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import numpy as np
 
 from config import CFG
-from experiments.thesis.figlib import FigureSpec, extrapolation_weights, run_figure, summarize_hc, table_value
+from experiments.thesis.figlib import (FigureSpec, crossing_consistent, extrapolation_weights, run_figure,
+                                       summarize_hc, table_value)
 from utils.plotting import (ANSATZ_MARKERS, COLORS, MITIGATION_COLORS, MODE_COLORS, MODE_LABELS,
                             label_zero_strength, panel_labels, reference_line, size_color, thesis_figure,
                             zero_strength_positions)
@@ -59,7 +60,8 @@ def build(ctx):
     sizes = list(ml.noisy_sizes)
     ch = ml.noisy_channels[0]
     noise = {a: ctx.load(f"noise_{a}_N{Np}_p{Np // 2}_{ch}_{var}", "phase7/noise",
-                         require=("acc", "hc", "lam", "strengths", "modes", "kinds", "feature_sets", "classifiers"))
+                         require=("acc", "hc", "P", "lam", "strengths", "modes", "kinds", "feature_sets",
+                                  "classifiers"))
              for a, _ in ANSATZE}
     zne = {(a, N): ctx.load(f"zne_{a}_N{N}_p{N // 2}_{ch}", "phase7/zne",
                             require=("hc", "hc_rep", "modes", "methods", "lam", "strengths", "feature_rms_to_clean"))
@@ -85,11 +87,11 @@ def build(ctx):
     # -- validation ------------------------------------------------------------
     rng_ok, bad = True, 0
     for d in noise.values():
-        acc, hc = np.asarray(d["acc"]), np.asarray(d["hc"])
+        acc = np.asarray(d["acc"])
         rng_ok &= bool(np.nanmin(acc) >= 0 and np.nanmax(acc) <= 1)
-        a = acc[~np.isfinite(hc)]
-        bad += int(np.sum(~(np.isclose(a, ALL_DISORDERED) | np.isclose(a, ALL_ORDERED))))
-    ctx.check_true("accuracy in [0, 1]; no crossing gives 20/38 or 18/38", rng_ok and bad == 0, f"{bad} exceptions")
+        bad += crossing_consistent(d["hc"], d["P"], getattr(ml, "decision_threshold", 0.5))[0]
+    ctx.check_true("accuracy in [0, 1]; missing h_c^ML <=> isotonic fit never crosses 1/2", rng_ok and bad == 0,
+                   f"{bad} inconsistent entries")
     ratios, ratios_ro = [], []
     for d in zne.values():
         r = np.asarray(d["feature_rms_to_clean"])
