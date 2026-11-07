@@ -21,7 +21,10 @@ the Eckart-Young bound F_GS <= sum of the 2^p largest Schmidt weights.
 
 Validation
   * Rank bound for S and S_2 (all N, p, h, cuts, both ansaetze).
-  * Fannes-Audenaert bound at the half cut; Eckart-Young bound on F_GS.
+  * Fannes-Audenaert bound at the half cut, evaluated to the precision with
+    which 1 - F is known (relative allowance INFIDELITY_ULP / (1 - F), with
+    1 - F floored at CFG.ent.fidelity_resolution as in Phase 3); Eckart-Young
+    bound on F_GS.
   * The ED even-state half-chain entropy equals the Phase 1 value.
   * Capacity: S2_max = p ln 2 for every p < N/2 (the rank bound is reached),
     and S2_max <= min(p, N/2) ln 2 for every p.
@@ -56,6 +59,11 @@ SPEC = FigureSpec(
 
 ANSATZE = (("hva", "HVA"), ("hea", "HEA"))
 LN2 = np.log(2.0)
+# 1 - F is known only to a few units of double precision (2.2e-16). Near F = 1
+# the Fannes-Audenaert bound B is steep, so it is evaluated only to relative
+# accuracy (elasticity d ln B / d ln(1 - F) < 1/2, so this is conservative):
+#     delta B / B <= INFIDELITY_ULP / (1 - F).
+INFIDELITY_ULP = 4.0 * np.finfo(float).eps
 
 
 def build(ctx):
@@ -74,6 +82,8 @@ def build(ctx):
 
     # -- validation ------------------------------------------------------------
     rank_slack, fa_slack, ey_slack = [], [], []
+    fa_raw, fa_worst = 0, None
+    floor = CFG.ent.fidelity_resolution
     for a, _ in ANSATZE:
         for N in sizes:
             d = ent[a][N]
@@ -84,11 +94,26 @@ def build(ctx):
                 rank_slack.append(np.max(np.asarray(d[key]) - cap[:, None, :]))
             half = N // 2 - 1
             dS = np.abs(np.asarray(d["S"])[:, :, half] - np.asarray(d["S_ref"])[:, :, half])
-            fa_slack.append(np.max(dS - np.asarray(d["audenaert"])))
+            bnd = np.asarray(d["audenaert"])
+            x = np.maximum(1.0 - np.asarray(d["fidelity_gs"]), floor)
+            allowed = bnd * (1.0 + INFIDELITY_ULP / x)
+            excess = dS - allowed
+            fa_slack.append(np.max(excess))
+            fa_raw += int(np.sum(dS - bnd > tol))
+            k = np.unravel_index(np.argmax(dS - bnd), dS.shape)
+            cand = (float((dS - bnd)[k]), a, N, int(p[k[0]]), float(d["h"][k[1]]), float(x[k]),
+                    float(dS[k]), float(bnd[k]))
+            if fa_worst is None or cand[0] > fa_worst[0]:
+                fa_worst = cand
             ey_slack.append(np.max(np.asarray(d["fidelity_gs"]) - d["rank_fidelity_bound"]))
     ctx.check_max("rank bound S_alpha(l) <= min(p, l, N-l) ln 2 (S and S_2, all states, cuts)",
                   rank_slack, tol)
-    ctx.check_max("Fannes-Audenaert bound on |S_VQE - S_ref| at the half cut", fa_slack, tol)
+    ex, a_w, n_w, p_w, h_w, x_w, ds_w, b_w = fa_worst
+    ctx.check_max("Fannes-Audenaert bound on |S_VQE - S_ref| at the half cut "
+                  "(bound evaluated to double precision of 1 - F)", fa_slack, tol,
+                  detail=f"closest point {a_w.upper()} N={n_w} p={p_w} h={h_w:g}: 1-F={x_w:.2e}, "
+                         f"|dS|={ds_w:.3e}, bound={b_w:.3e}; {fa_raw} points exceed the stored "
+                         f"bound by more than {tol:g} before the precision allowance")
     ctx.check_max("Eckart-Young bound F_GS <= sum of the 2^p largest Schmidt weights", ey_slack, tol)
     dev = [np.max(np.abs(np.asarray(ed[N]["S_even"])[:, N // 2 - 1] - ph1[N]["S_half"])) for N in sizes]
     ctx.check_max("ED even-state S(N/2) equals the Phase 1 value", dev, th.identity_tol)
