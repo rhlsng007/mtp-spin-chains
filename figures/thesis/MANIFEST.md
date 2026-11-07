@@ -521,7 +521,7 @@ Notes:
 
 ## fig16_error_budget_window: One error-budget window: where entanglement, mitigation and classification fail
 
-Thresholds of Phases 4, 5 and 7 for the N = 8, p = 4 circuits at h = J on a common axis, the error budget lambda (expected number of gate errors per circuit). HVA: circles, HEA: squares. Phase 4: entanglement certificates lost under depolarizing (purple), amplitude-damping (light blue) and dephasing (green) noise. Phase 5: readout correction plus zero-noise extrapolation no longer reaches VQE accuracy. Phase 7: the learned critical field drifts by 2 sigma. The grey band is spanned by the Phase 4 witness and hashing thresholds; the hatched band is the ZNE window. Clean-trained classification fails inside the same window in which the entanglement certificates are lost; training on noisy data moves the threshold beyond it.
+Thresholds of Phases 4, 5 and 7 for the N = 8, p = 4 circuits at h = J on a common axis, the error budget lambda (expected number of gate errors per circuit). HVA: circles, HEA: squares. Phase 4: entanglement certificates lost under depolarizing (purple), amplitude-damping (light blue) and dephasing (green) noise. Phases 5 and 7 use the hardware-like noise model (red). Phase 5: readout correction plus zero-noise extrapolation no longer reaches VQE accuracy. Phase 7: the learned critical field drifts by 2 sigma. The grey band is spanned by the Phase 4 witness and hashing thresholds; the hatched band is the ZNE window. Clean-trained classification fails inside the same window in which the entanglement certificates are lost; training on noisy data moves the threshold beyond it.
 
 Command: `python experiments\thesis\fig16_error_budget_window.py`
 

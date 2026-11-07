@@ -41,8 +41,7 @@ from experiments.thesis.fig11_error_mitigation import estimates, recovery_streng
 from experiments.thesis.fig14_hc_vs_noise import PHASE7_ONSETS
 from experiments.thesis.figlib import (FigureSpec, drift_onset, extrapolation_weights, field_index, run_figure,
                                        summarize_hc)
-from utils.plotting import (ANSATZ_MARKERS, CHANNEL_COLORS, COLORS, MITIGATION_COLORS, MODE_COLORS,
-                            SERIES_COLORS, thesis_figure)
+from utils.plotting import ANSATZ_MARKERS, CHANNEL_COLORS, COLORS, thesis_figure
 
 SPEC = FigureSpec(
     number=16,
@@ -53,7 +52,8 @@ SPEC = FigureSpec(
     caption=("Thresholds of Phases 4, 5 and 7 for the N = 8, p = 4 circuits at h = J on a common "
              "axis, the error budget lambda (expected number of gate errors per circuit). HVA: "
              "circles, HEA: squares. Phase 4: entanglement certificates lost under depolarizing "
-             "(purple), amplitude-damping (light blue) and dephasing (green) noise. Phase 5: readout "
+             "(purple), amplitude-damping (light blue) and dephasing (green) noise. Phases 5 and 7 "
+             "use the hardware-like noise model (red). Phase 5: readout "
              "correction plus zero-noise extrapolation no longer reaches VQE accuracy. Phase 7: the "
              "learned critical field drifts by 2 sigma. The grey band is spanned by the Phase 4 "
              "witness and hashing thresholds; the hatched band is the ZNE window. Clean-trained "
@@ -177,9 +177,10 @@ def build(ctx):
             ax.plot(wit[a, ch], y[0] + dy[a], mk, color=CHANNEL_COLORS[ch], ms=4.5)
             ax.plot(hsh[a, ch], y[1] + dy[a], mk, color=CHANNEL_COLORS[ch], ms=4.5)
         ax.plot(death[a], y[2] + dy[a], mk, color=CHANNEL_COLORS["depolarizing"], ms=4.5)
-        ax.plot(rec[a], y[3] + dy[a], mk, color=MITIGATION_COLORS["combined"], ms=4.5)
+        hw = CHANNEL_COLORS["realistic"]              # Phases 5 and 7 use the hardware-like model
+        ax.plot(rec[a], y[3] + dy[a], mk, color=hw, ms=4.5)
         for row, m in zip(y[4:], ("clean_ed", "clean_vqe", "mixed")):
-            ax.plot(drift[a, m], row + dy[a], mk, color=MODE_COLORS[m], ms=4.5)
+            ax.plot(drift[a, m], row + dy[a], mk, color=hw, ms=4.5)
     for row in y[:-1]:
         ax.axhline(row - 0.5, color=COLORS["grey"], lw=0.3)
     ax.axhline(y[3] + 0.5, color=COLORS["black"], lw=0.6)
@@ -194,11 +195,11 @@ def build(ctx):
         ax.text(1.01, row, txt, transform=ax.get_yaxis_transform(), ha="left", va="center", rotation=90)
     hs = [ax.plot([], [], "s", color=CHANNEL_COLORS[ch], ms=4.5, label=lab)[0]
           for ch, lab in (("depolarizing", "depolarizing"), ("amplitude_damping", "amplitude damping"),
-                          ("dephasing", "dephasing"))]
+                          ("dephasing", "dephasing"), ("realistic", "hardware-like (Phases 5, 7)"))]
     hs += [ax.plot([], [], ANSATZ_MARKERS[n], color=COLORS["black"], ms=4.5, label=f"{lab}: {n}")[0]
            for n, lab in (("HVA", "circles"), ("HEA", "squares"))]
-    fig.legend(handles=hs, loc="outside lower center", ncol=5, columnspacing=1.2,
-               title="Phase 4 noise channel (colour) and ansatz (marker)")
+    fig.legend(handles=hs, loc="outside lower center", ncol=3, columnspacing=1.2,
+               title="noise model (colour) and ansatz (marker)")
     return fig
 
 
