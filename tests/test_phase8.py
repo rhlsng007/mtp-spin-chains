@@ -271,3 +271,35 @@ def test_sector_gaps_follow_labels():
     se[:, 0, 0], se[:, 1, 0] = [-2.0, -3.0], [-1.0, -2.5]
     e_even, e_odd = sector_gaps({"sector_labels": np.array([[-1], [1]]), "sector_energies": se})
     assert np.allclose(e_even, [-1.0, -2.5]) and np.allclose(e_odd, [-2.0, -3.0])
+
+
+# ---------------------------------------------------------------------------
+# Figures 8 to 12: extrapolation weights, error budgets, crossings
+# ---------------------------------------------------------------------------
+from experiments.thesis.figlib import (error_budget_phase4, error_budget_phase5,  # noqa: E402
+                                       extrapolation_weights, loglog_slope)
+from experiments.thesis.fig09_mixed_state_entanglement import first_crossing  # noqa: E402
+
+
+def test_extrapolation_weights_match_phase5_closed_forms():
+    r = extrapolation_weights([1, 3, 5], 2)
+    lin = extrapolation_weights([1, 3, 5], 1)
+    assert np.allclose(r, [15 / 8, -5 / 4, 3 / 8], atol=1e-14)
+    assert np.allclose(lin, [13 / 12, 1 / 3, -5 / 12], atol=1e-14)
+    assert r @ r == pytest.approx(167 / 32, rel=1e-12) and lin @ lin == pytest.approx(35 / 24, rel=1e-12)
+    lam = np.array([1.0, 3.0, 5.0])
+    assert r @ (2 + 3 * lam - 0.5 * lam ** 2) == pytest.approx(2.0, abs=1e-12)   # exact for quadratics
+
+
+def test_error_budgets():
+    assert error_budget_phase4(1e-3, 40, 28) == pytest.approx(0.068)
+    assert error_budget_phase5("realistic", 1e-3, 40, 28) == pytest.approx(0.32)       # 320 p
+    assert error_budget_phase5("dephasing", 1e-3, 40, 28) == pytest.approx(0.096)
+    assert loglog_slope([1e-5, 2e-5], [3e-10, 2.4e-9]) == pytest.approx(3.0)
+
+
+def test_first_crossing_log_interpolation():
+    s = np.array([0.0, 1e-4, 1e-3, 1e-2])
+    y = np.array([-1.0, -1.0, -0.5, 0.5])                 # crosses half-way in log p
+    assert first_crossing(s, y) == pytest.approx(10 ** -2.5, rel=1e-12)
+    assert np.isnan(first_crossing(s, -np.ones(4)))

@@ -366,3 +366,38 @@ def exp_decay_fit(n, var) -> tuple:
     r = y - A @ coef
     err = float(np.sqrt((r @ r) / max(n.size - 2, 1) * np.linalg.inv(A.T @ A)[0, 0]))
     return -float(coef[0]), err, float(np.exp(coef[1]))
+
+
+def extrapolation_weights(scales, degree: int) -> np.ndarray:
+    """
+    Weights c_k with E* = sum_k c_k E(lambda_k): least-squares polynomial of the
+    given degree through (lambda_k, E_k), evaluated at lambda = 0. degree =
+    len(scales) - 1 is Richardson extrapolation (exact interpolation); degree 1
+    with three scales is the linear least-squares fit of Phase 5.
+    """
+    lam = np.asarray(scales, dtype=float)
+    V = np.vander(lam, degree + 1, increasing=True)          # [k, j] = lambda_k^j
+    return np.linalg.pinv(V)[0]                              # row of the constant term
+
+
+def error_budget_phase4(strength, n_1q: int, n_2q: int):
+    """Phase 4 error budget lambda = p (n_1q + n_2q), all channels (two-qubit factor 1)."""
+    return np.asarray(strength, dtype=float) * (n_1q + n_2q)
+
+
+def error_budget_phase5(channel: str, strength, n_1q: int, n_2q: int):
+    """
+    Phase 5 error budget: lambda = p (n_1q + 10 n_2q) for depolarizing and the
+    hardware-like (realistic) model, p (n_1q + 2 n_2q) for amplitude damping and
+    dephasing (one channel per qubit a two-qubit gate touches).
+    """
+    factor = 10.0 if channel in ("depolarizing", "realistic") else 2.0
+    return np.asarray(strength, dtype=float) * (n_1q + factor * n_2q)
+
+
+def loglog_slope(x, y) -> float:
+    """Slope of ln y against ln x between two points (NaN if not both positive)."""
+    x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
+    if np.any(x <= 0) or np.any(y <= 0):
+        return float("nan")
+    return float((np.log(y[1]) - np.log(y[0])) / (np.log(x[1]) - np.log(x[0])))

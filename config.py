@@ -404,6 +404,14 @@ class ThesisConfig:
     ent_cc_sizes: tuple = (8, 10, 12)
     capacity_tol: float = 1e-6           # S2_max = p ln 2 for p < N/2
     pbc_entropy_tol: float = 1e-6        # periodic HVA at p = N/2 reproduces S_ED
+    # Figures 8 to 10: noise (Phase 4)
+    noise_size: int = 8                  # N of the strength sweeps drawn (p = N/2)
+    noise_field: float = 1.0
+    negativity_threshold: float = 0.1    # E_N(0) above which E_N must fall monotonically
+    zero_tol: float = 1e-10              # E_N counts as 0 (sudden death) below this
+    hashing_rtol: float = 0.01           # hashing-bound strength against the Phase 4 report
+    # Figures 11 and 12: mitigation (Phase 5; sizes and field from CFG.mitigation)
+    report_rtol: float = 1e-3            # medians recomputed from the same data
 
 
 # ---------------------------------------------------------------------------
