@@ -229,3 +229,45 @@ def test_crossing_interpolation():
     x = np.linspace(0, 2, 21)
     assert crossing(x, x, 1.234 + 0 * x, (0, 2)) == pytest.approx(1.234, abs=1e-12)
     assert np.isnan(crossing(x, x, 5 + 0 * x, (0, 2)))
+
+
+# ---------------------------------------------------------------------------
+# Figures 2 to 7: analysis helpers against exact results
+# ---------------------------------------------------------------------------
+from experiments.thesis.figlib import cc_fit, chord_log, exp_decay_fit, field_index  # noqa: E402
+from experiments.thesis.fig04_vqe_error_vs_field import sector_gaps  # noqa: E402
+
+
+@pytest.mark.parametrize("boundary,scale", [("open", 6.0), ("periodic", 3.0)])
+def test_cc_fit_recovers_exact_central_charge(boundary, scale):
+    n, c, s0 = 14, 0.5, 0.3
+    profile = c / scale * chord_log(n, boundary) + s0
+    got, err, const = cc_fit(profile, n, boundary, ell_min=2)
+    assert got == pytest.approx(c, abs=1e-12) and const == pytest.approx(s0, abs=1e-12)
+    assert err == pytest.approx(0.0, abs=1e-10)
+    assert np.isnan(cc_fit(profile[:3], 4, boundary, ell_min=2)[0])      # one point: no fit
+    assert np.isnan(cc_fit(chord_log(6, boundary), 6, boundary, 2)[1])   # two points: no error
+
+
+def test_exp_decay_fit_exact():
+    n = np.arange(4, 16, 2)
+    b, err, A = exp_decay_fit(n, 0.3 * np.exp(-np.log(2) * n))
+    assert b == pytest.approx(np.log(2), abs=1e-12) and A == pytest.approx(0.3, rel=1e-10)
+    assert err < 1e-10
+
+
+def test_check_rounded_and_field_index(tmp_path):
+    ctx = Context(SPEC, results_dir=tmp_path, verbose=False)
+    assert ctx.check_rounded("a", [0.56441, 3.0e-15, 0.5], [0.5644, 3.161e-15, None])
+    assert not ctx.check_rounded("b", [0.5650], [0.5644])
+    assert not ctx.check_rounded("c", [np.nan], [0.5])
+    assert field_index(np.round(np.linspace(0.1, 2.0, 39), 6), 1.0) == 18
+    with pytest.raises(ValueError):
+        field_index([0.1, 0.2], 0.15)
+
+
+def test_sector_gaps_follow_labels():
+    se = np.zeros((2, 2, 3))
+    se[:, 0, 0], se[:, 1, 0] = [-2.0, -3.0], [-1.0, -2.5]
+    e_even, e_odd = sector_gaps({"sector_labels": np.array([[-1], [1]]), "sector_energies": se})
+    assert np.allclose(e_even, [-1.0, -2.5]) and np.allclose(e_odd, [-2.0, -3.0])

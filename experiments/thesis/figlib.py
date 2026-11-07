@@ -223,6 +223,24 @@ class Context:
         return self._add(Check(label, bool(math.isfinite(v) and v >= bound), v, f">= {_fmt(bound)}",
                                None, detail))
 
+    def check_rounded(self, label: str, values, reported, sig: int = 4, floor: float = 1e-10,
+                      detail: str = "") -> bool:
+        """
+        values agree with numbers printed to `sig` significant figures (e.g. a
+        phase report): |v - r| <= half a unit in the last printed digit, at least
+        `floor`. Entries reported as None (no value) are skipped.
+        """
+        pairs = [(float(v), float(r)) for v, r in zip(np.ravel(values), np.ravel(reported))
+                 if r is not None]
+        worst, ok = 0.0, True
+        for v, r in pairs:
+            tol = max(0.5 * 10.0 ** (math.floor(math.log10(abs(r))) - sig + 1) if r else 0.0, floor)
+            ok &= math.isfinite(v) and abs(v - r) <= tol * (1 + 1e-9)
+            worst = max(worst, abs(v - r))
+        detail = "; ".join(x for x in (f"{len(pairs)} values, max difference {_fmt(worst)}, "
+                                      f"{sig} significant figures", detail) if x)
+        return self._add(Check(label, bool(ok and pairs), None, None, None, detail))
+
     def check_true(self, label: str, condition, detail: str = "") -> bool:
         return self._add(Check(label, bool(condition), None, None, None, detail))
 
@@ -296,3 +314,55 @@ def run_figure(spec: FigureSpec, build, argv=None, *, figures_dir: Path = FIGURE
     print(f"{spec.name}: {n_pass} checks passed, {ctx.n_failed} failed, "
           f"{len(ctx.notes)} notes ({record['seconds']:.1f} s)")
     return 1 if (ctx.n_failed and CFG.thesis.strict) else 0
+
+
+# ---------------------------------------------------------------------------
+# Analysis helpers shared by the figure scripts
+# ---------------------------------------------------------------------------
+def field_index(h, value: float) -> int:
+    """Index of `value` in a field grid (exactly one match required)."""
+    hit = np.flatnonzero(np.isclose(np.asarray(h, dtype=float), value, atol=1e-9))
+    if hit.size != 1:
+        raise ValueError(f"field {value} found {hit.size} times in the grid")
+    return int(hit[0])
+
+
+def chord_log(n_qubits: int, boundary: str, ell=None) -> np.ndarray:
+    """ln[(2N/pi) sin(pi l/N)] (open) or ln[(N/pi) sin(pi l/N)] (periodic)."""
+    ell = np.arange(1, n_qubits) if ell is None else np.asarray(ell, dtype=float)
+    pref = 2.0 * n_qubits / np.pi if boundary == "open" else n_qubits / np.pi
+    return np.log(pref * np.sin(np.pi * ell / n_qubits))
+
+
+def cc_fit(profile, n_qubits: int, boundary: str, ell_min: int = 2) -> tuple:
+    """
+    Calabrese-Cardy fit of S(l) over ell_min <= l <= N/2 (the Phase 1 and 3
+    convention): S = (c/6) x + s' (open) or (c/3) x + s (periodic), x = chord_log.
+    profile[k] is S at cut l = k + 1. Returns (c, standard error of c or NaN
+    with two points, constant). Ordinary least squares.
+    """
+    ell = np.arange(ell_min, n_qubits // 2 + 1)
+    if ell.size < 2:
+        return float("nan"), float("nan"), float("nan")
+    x = chord_log(n_qubits, boundary, ell)
+    y = np.asarray(profile, dtype=float)[ell - 1]
+    A = np.vstack([x, np.ones_like(x)]).T
+    coef = np.linalg.lstsq(A, y, rcond=None)[0]
+    scale = 6.0 if boundary == "open" else 3.0
+    err = float("nan")
+    if ell.size > 2:
+        r = y - A @ coef
+        cov = (r @ r) / (ell.size - 2) * np.linalg.inv(A.T @ A)
+        err = scale * float(np.sqrt(cov[0, 0]))
+    return scale * float(coef[0]), err, float(coef[1])
+
+
+def exp_decay_fit(n, var) -> tuple:
+    """Fit Var = A exp(-b N) by least squares in ln Var; returns (b, error of b, A)."""
+    n = np.asarray(n, dtype=float)
+    y = np.log(np.asarray(var, dtype=float))
+    A = np.vstack([n, np.ones_like(n)]).T
+    coef = np.linalg.lstsq(A, y, rcond=None)[0]
+    r = y - A @ coef
+    err = float(np.sqrt((r @ r) / max(n.size - 2, 1) * np.linalg.inv(A.T @ A)[0, 0]))
+    return -float(coef[0]), err, float(np.exp(coef[1]))

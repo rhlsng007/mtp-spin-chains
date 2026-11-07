@@ -381,6 +381,29 @@ class ThesisConfig:
     cat_entropy_tol: float = 1e-3      # largest deviation is N = 4 (2e-4); N >= 6: 6e-6
     area_law_field: float = 2.0          # paramagnet: S(N/2) saturates with N
     area_law_tol: float = 1e-4
+    # Shared tolerances (Figures 2 to 7)
+    identity_tol: float = 1e-10          # the same quantity stored by two phases
+    regression_tol: float = 1e-4         # figure value against the phase report value
+    # Figure 2: central charges (Phase 1 entropy profiles at the critical points)
+    cc_size: int = 14
+    cc_fit_sizes: tuple = (6, 8, 10, 12, 14)
+    c_tol_tfim_periodic: float = 0.01    # |c - 1/2| at N = cc_size
+    c_tol_xxz_periodic: float = 0.05     # |c - 1| at N = cc_size
+    # Figures 3 to 5: noiseless VQE (Phase 2)
+    vqe_sizes: tuple = (4, 6, 8, 10, 12)
+    vqe_plot_sizes: tuple = (8, 12)      # sizes drawn in the field sweeps
+    vqe_field: float = 1.0               # field of the depth scans
+    vqe_pstar_fields: tuple = (0.5, 1.0, 1.5)
+    variational_tol: float = 1e-10       # E_VQE >= E0 - tol |E0|
+    exact_depth_tol: float = 1e-9        # N = 4, p = 4 is exact for both ansaetze
+    pbc_exact_tol: float = 1e-12         # periodic HVA at p = N/2 is exact
+    bp_fit_tol: float = 0.03             # HEA (p = N) decay rate against ln 2
+    bp_flat_max: float = 0.1             # |decay rate| of the HVA
+    # Figures 6 and 7: entanglement of VQE states (Phase 3)
+    ent_size: int = 12
+    ent_cc_sizes: tuple = (8, 10, 12)
+    capacity_tol: float = 1e-6           # S2_max = p ln 2 for p < N/2
+    pbc_entropy_tol: float = 1e-6        # periodic HVA at p = N/2 reproduces S_ED
 
 
 # ---------------------------------------------------------------------------
