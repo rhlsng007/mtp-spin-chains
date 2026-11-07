@@ -359,6 +359,69 @@ class MLConfig:
 
 
 # ---------------------------------------------------------------------------
+# Thesis figures and results consolidation (Phase 8)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class ThesisConfig:
+    # Output: figures/<figure_subdir>/figNN_<slug>.pdf/.png; sidecars and
+    # inventory in results/<results_subdir>/
+    figure_subdir: str = "thesis"
+    results_subdir: str = "phase8"
+    formats: tuple = ("pdf", "png")
+    png_dpi: int = 300
+    strict: bool = True                  # a failed check gives exit code 1
+    # Figure 1: exact-diagonalization baseline of the TFIM (Phase 1 data)
+    ed_sizes: tuple = (4, 6, 8, 10, 12, 14)
+    binder_sizes: tuple = (6, 8, 10, 12, 14)   # consecutive pairs give crossings
+    binder_window: tuple = (0.5, 1.5)    # crossings searched only in this field range
+    ff_tol: float = 1e-9                 # ED E0 and E1 - E0 against free fermions
+    gap_fit_sizes: tuple = (8, 10, 12, 14)   # N*gap(h_c) = a + b/N + c/N^2 -> a = pi
+    gap_fit_rtol: float = 1e-4
+    cat_field: float = 0.1               # ordered-phase plateau S(N/2) = ln 2
+    cat_entropy_tol: float = 1e-3      # largest deviation is N = 4 (2e-4); N >= 6: 6e-6
+    area_law_field: float = 2.0          # paramagnet: S(N/2) saturates with N
+    area_law_tol: float = 1e-4
+    # Shared tolerances (Figures 2 to 7)
+    identity_tol: float = 1e-10          # the same quantity stored by two phases
+    regression_tol: float = 1e-4         # figure value against the phase report value
+    # Figure 2: central charges (Phase 1 entropy profiles at the critical points)
+    cc_size: int = 14
+    cc_fit_sizes: tuple = (6, 8, 10, 12, 14)
+    c_tol_tfim_periodic: float = 0.01    # |c - 1/2| at N = cc_size
+    c_tol_xxz_periodic: float = 0.05     # |c - 1| at N = cc_size
+    # Figures 3 to 5: noiseless VQE (Phase 2)
+    vqe_sizes: tuple = (4, 6, 8, 10, 12)
+    vqe_plot_sizes: tuple = (8, 12)      # sizes drawn in the field sweeps
+    vqe_field: float = 1.0               # field of the depth scans
+    vqe_pstar_fields: tuple = (0.5, 1.0, 1.5)
+    variational_tol: float = 1e-10       # E_VQE >= E0 - tol |E0|
+    exact_depth_tol: float = 1e-9        # N = 4, p = 4 is exact for both ansaetze
+    pbc_exact_tol: float = 1e-12         # periodic HVA at p = N/2 is exact
+    bp_fit_tol: float = 0.03             # HEA (p = N) decay rate against ln 2
+    bp_flat_max: float = 0.1             # |decay rate| of the HVA
+    # Figures 6 and 7: entanglement of VQE states (Phase 3)
+    ent_size: int = 12
+    ent_cc_sizes: tuple = (8, 10, 12)
+    capacity_tol: float = 1e-6           # S2_max = p ln 2 for p < N/2
+    pbc_entropy_tol: float = 1e-6        # periodic HVA at p = N/2 reproduces S_ED
+    # Figures 8 to 10: noise (Phase 4)
+    noise_size: int = 8                  # N of the strength sweeps drawn (p = N/2)
+    noise_field: float = 1.0
+    negativity_threshold: float = 0.1    # E_N(0) above which E_N must fall monotonically
+    zero_tol: float = 1e-10              # E_N counts as 0 (sudden death) below this
+    hashing_rtol: float = 0.01           # hashing-bound strength against the Phase 4 report
+    # Figures 11 and 12: mitigation (Phase 5; sizes and field from CFG.mitigation)
+    report_rtol: float = 1e-3            # medians recomputed from the same data
+    # Figures 13 to 16: machine-learning classification (Phases 6 and 7; sizes from CFG.ml)
+    ml_main_kind: str = "shadow"         # noise figures: shadow features,
+    ml_main_features: str = "corr"       # correlator feature set,
+    ml_main_classifier: str = "logistic" # logistic regression (Phase 7 convention)
+    drift_sigmas: float = 2.0            # drift onset: shift > 2 combined sigma (Phase 7)
+    table_tol: float = 5e-5              # Phase 7 CSV tables print 4 decimals
+    zne_feature_ratio_max: float = 0.1   # ZNE leaves < 10 % of the exact feature error
+
+
+# ---------------------------------------------------------------------------
 # Reproducibility
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -388,6 +451,7 @@ class Config:
     mitigation: MitigationConfig = field(default_factory=MitigationConfig)
     ml: MLConfig = field(default_factory=MLConfig)
     seeds: SeedConfig = field(default_factory=SeedConfig)
+    thesis: ThesisConfig = field(default_factory=ThesisConfig)
 
     def to_dict(self) -> dict:
         """Plain dictionary, stored alongside every saved result."""

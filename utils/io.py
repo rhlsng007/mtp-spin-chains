@@ -29,17 +29,42 @@ TRACKED_PACKAGES = ("numpy", "scipy", "pennylane", "torch", "scikit-learn", "mat
 # ---------------------------------------------------------------------------
 # Provenance helpers
 # ---------------------------------------------------------------------------
+def _git(*args: str) -> str:
+    out = subprocess.run(
+        ["git", *args],
+        capture_output=True, text=True, check=True,
+        cwd=Path(__file__).resolve().parent.parent,
+    )
+    return out.stdout.strip()
+
+
+def format_commit(commit: str, dirty: bool) -> str:
+    """'abc1234' for a clean tree, 'abc1234-dirty' if tracked files differ from HEAD."""
+    return f"{commit}-dirty" if dirty else commit
+
+
+def strip_dirty(commit: str) -> str:
+    """Commit hash without the '-dirty' suffix (for git commands such as merge-base)."""
+    return commit[: -len("-dirty")] if commit.endswith("-dirty") else commit
+
+
 def _git_commit() -> str:
-    """Current git commit hash, or 'unknown' outside a repository."""
+    """
+    Current git commit hash, or 'unknown' outside a repository.
+
+    The suffix '-dirty' (added in Phase 8) marks results produced while tracked
+    files had uncommitted changes, so the hash alone does not reproduce them.
+    Untracked files (results/, new scripts not yet added) do not count.
+    """
     try:
-        out = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, check=True,
-            cwd=Path(__file__).resolve().parent.parent,
-        )
-        return out.stdout.strip()
+        commit = _git("rev-parse", "--short", "HEAD")
     except Exception:
         return "unknown"
+    try:
+        dirty = bool(_git("status", "--porcelain", "--untracked-files=no"))
+    except Exception:
+        dirty = False
+    return format_commit(commit, dirty)
 
 
 def _package_versions() -> dict:

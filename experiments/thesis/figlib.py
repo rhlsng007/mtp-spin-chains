@@ -1,0 +1,499 @@
+"""
+Framework shared by every thesis figure script (Phase 8, T8.1 to T8.3).
+
+Each thesis figure is one script experiments/thesis/figNN_<slug>.py that
+
+1. declares a FigureSpec (number, slug, chapter, phases, caption);
+2. defines build(ctx) -> Figure, which loads saved results through ctx.load(),
+   records the parameters it uses (ctx.param) and its observations (ctx.note),
+   and validates the data against exact results (ctx.check_*);
+3. ends with  raise SystemExit(run_figure(SPEC, build)).
+
+run_figure() applies the thesis style, runs build(), audits the style
+(printed width, font sizes, fixed series colours), saves
+figures/thesis/<name>.pdf and .png, and writes a sidecar
+results/phase8/figures/<name>.json with the inputs (file, the commit that
+produced it, a content hash), the parameters, the checks and the notes. The
+sidecars are what make_thesis_figures.py turns into figures/thesis/MANIFEST.md,
+and what the Results notes (T8.3) are written from.
+
+Exit codes: 0 all checks passed; 1 a check failed (with CFG.thesis.strict);
+an exception inside build() propagates (exit code 1 with a traceback).
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import logging
+import math
+import os
+import platform
+import sys
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+
+os.environ.setdefault("MPLBACKEND", "Agg")      # figures are written, never shown
+logging.getLogger("fontTools").setLevel(logging.ERROR)   # cmr10 has a zero 'created' date
+
+import numpy as np
+
+from config import CFG, FIGURES_DIR, RESULTS_DIR
+from utils.io import _git_commit
+from utils.plotting import audit_style, save_thesis_figure, thesis_style
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+# ---------------------------------------------------------------------------
+# Specification and context
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class FigureSpec:
+    number: int
+    slug: str
+    chapter: str
+    phases: tuple
+    title: str
+    caption: str
+    width: str = "full"                  # "full" (6.3 in) or "half" (3.1 in)
+
+    @property
+    def key(self) -> str:
+        return f"fig{self.number:02d}"
+
+    @property
+    def name(self) -> str:
+        return f"{self.key}_{self.slug}"
+
+
+@dataclass
+class Check:
+    label: str
+    passed: bool
+    value: object = None
+    target: object = None
+    tol: object = None
+    detail: str = ""
+
+    def line(self) -> str:
+        tag = "PASS" if self.passed else "FAIL"
+        parts = [f"[{tag}] {self.label}"]
+        if self.value is not None:
+            parts.append(f"value {_fmt(self.value)}")
+        if self.target is not None:
+            parts.append(f"target {_fmt(self.target)}")
+        if self.tol is not None:
+            parts.append(self.tol if isinstance(self.tol, str) else f"tol {_fmt(self.tol)}")
+        if self.detail:
+            parts.append(self.detail)
+        return "; ".join(parts)
+
+
+def _fmt(x) -> str:
+    """Compact, deterministic number formatting for logs and the manifest."""
+    if isinstance(x, (bool, np.bool_)):
+        return str(bool(x))
+    if isinstance(x, (int, np.integer)):
+        return str(int(x))
+    if isinstance(x, (float, np.floating)):
+        x = float(x)
+        if x == 0 or not math.isfinite(x):
+            return f"{x:g}"
+        return f"{x:.6g}" if 1e-3 <= abs(x) < 1e5 else f"{x:.3e}"
+    if isinstance(x, (list, tuple, np.ndarray)):
+        return "[" + ", ".join(_fmt(v) for v in np.ravel(np.asarray(x, dtype=object))) + "]"
+    return str(x)
+
+
+def _json_safe(obj):
+    if isinstance(obj, dict):
+        return {str(k): _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    if isinstance(obj, np.ndarray):
+        return _json_safe(obj.tolist())
+    if isinstance(obj, np.generic):
+        return obj.item()
+    if isinstance(obj, float) and not math.isfinite(obj):
+        return str(obj)
+    if isinstance(obj, Path):
+        return obj.as_posix()
+    return obj
+
+
+def file_digest(path: Path, n_hex: int = 12) -> str:
+    """Short SHA-256 of a file (identifies the exact data a figure was drawn from)."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()[:n_hex]
+
+
+class Context:
+    """Passed to build(ctx): loads inputs and records parameters, notes and checks."""
+
+    def __init__(self, spec: FigureSpec, results_dir: Path = RESULTS_DIR, verbose: bool = True):
+        self.spec = spec
+        self.results_dir = Path(results_dir)
+        self.verbose = verbose
+        self.inputs: list[dict] = []
+        self.params: dict = {}
+        self.notes: list[str] = []
+        self.checks: list[Check] = []
+
+    # -- inputs -------------------------------------------------------------
+    def load(self, name: str, subdir: str, require: tuple = ()) -> dict:
+        """
+        Arrays of results/<subdir>/<name>.npz; records the file, the commit that
+        produced it (from the .json metadata) and a content hash. ``require``
+        lists keys that must be present (a clear error lists the available ones).
+        """
+        npz = self.results_dir / subdir / f"{name}.npz"
+        meta_path = npz.with_suffix(".json")
+        if not npz.exists():
+            raise FileNotFoundError(
+                f"{self.spec.name}: missing input {npz.relative_to(self.results_dir.parent)}; "
+                f"run the Phase {subdir[-1] if subdir[-1:].isdigit() else '?'} experiments first")
+        with np.load(npz, allow_pickle=False) as data:
+            arrays = {k: data[k] for k in data.files}
+        meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
+        missing = [k for k in require if k not in arrays]
+        if missing:
+            raise KeyError(f"{subdir}/{name}: missing keys {missing}; available: {sorted(arrays)}")
+        self.inputs.append({
+            "file": f"{subdir}/{name}",
+            "commit": meta.get("git_commit", "unknown"),
+            "timestamp": meta.get("timestamp", ""),
+            "sha256": file_digest(npz),
+        })
+        return arrays
+
+    def load_table(self, name: str, subdir: str) -> list:
+        """Rows (dicts of strings) of a CSV result table, recorded as an input."""
+        import csv
+        path = self.results_dir / subdir / name
+        if not path.exists():
+            raise FileNotFoundError(f"{self.spec.name}: missing input {subdir}/{name}")
+        self.inputs.append({"file": f"{subdir}/{name}", "commit": "", "timestamp": "",
+                            "sha256": file_digest(path)})
+        with open(path, newline="", encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+
+    def load_json(self, name: str, subdir: str) -> dict:
+        """A plain JSON result (e.g. phaseN_report_data.json), recorded as an input."""
+        path = self.results_dir / subdir / name
+        if not path.exists():
+            raise FileNotFoundError(f"{self.spec.name}: missing input {subdir}/{name}")
+        self.inputs.append({"file": f"{subdir}/{name}", "commit": "", "timestamp": "",
+                            "sha256": file_digest(path)})
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    # -- records -------------------------------------------------------------
+    def param(self, **kw) -> None:
+        self.params.update(kw)
+
+    def note(self, text: str) -> None:
+        self.notes.append(text)
+        if self.verbose:
+            print(f"[note] {text}")
+
+    def _add(self, check: Check) -> bool:
+        self.checks.append(check)
+        if self.verbose:
+            print(check.line())
+        return check.passed
+
+    def check_close(self, label: str, value, target, atol: float = 0.0, rtol: float = 0.0,
+                    detail: str = "") -> bool:
+        """|value - target| <= atol + rtol |target| (elementwise; max reported)."""
+        v, t = np.asarray(value, dtype=float), np.asarray(target, dtype=float)
+        err = np.abs(v - t)
+        ok = bool(np.all(np.isfinite(v)) and np.all(err <= atol + rtol * np.abs(t)))
+        worst = float(np.max(err)) if err.size else 0.0
+        tol = " + ".join(f"{n} {_fmt(x)}" for n, x in (("atol", atol), ("rtol", rtol)) if x) or "exact"
+        if v.size == 1:
+            detail = "; ".join(x for x in (f"deviation {_fmt(worst)}", detail) if x)
+            return self._add(Check(label, ok, float(v), float(t) if t.size == 1 else t,
+                                   tol, detail))
+        detail = "; ".join(x for x in (f"max deviation {_fmt(worst)} over {v.size} values", detail) if x)
+        return self._add(Check(label, ok, None, None, tol, detail))
+
+    def check_max(self, label: str, value, bound, detail: str = "") -> bool:
+        """max(value) <= bound."""
+        v = float(np.max(np.asarray(value, dtype=float)))
+        return self._add(Check(label, bool(math.isfinite(v) and v <= bound), v, f"<= {_fmt(bound)}",
+                               None, detail))
+
+    def check_min(self, label: str, value, bound, detail: str = "") -> bool:
+        """min(value) >= bound."""
+        v = float(np.min(np.asarray(value, dtype=float)))
+        return self._add(Check(label, bool(math.isfinite(v) and v >= bound), v, f">= {_fmt(bound)}",
+                               None, detail))
+
+    def check_rounded(self, label: str, values, reported, sig: int = 4, floor: float = 1e-10,
+                      detail: str = "") -> bool:
+        """
+        values agree with numbers printed to `sig` significant figures (e.g. a
+        phase report): |v - r| <= half a unit in the last printed digit, at least
+        `floor`. Entries reported as None (no value) are skipped.
+        """
+        pairs = [(float(v), float(r)) for v, r in zip(np.ravel(values), np.ravel(reported))
+                 if r is not None]
+        worst, ok = 0.0, True
+        for v, r in pairs:
+            tol = max(0.5 * 10.0 ** (math.floor(math.log10(abs(r))) - sig + 1) if r else 0.0, floor)
+            ok &= math.isfinite(v) and abs(v - r) <= tol * (1 + 1e-9)
+            worst = max(worst, abs(v - r))
+        detail = "; ".join(x for x in (f"{len(pairs)} values, max difference {_fmt(worst)}, "
+                                      f"{sig} significant figures", detail) if x)
+        return self._add(Check(label, bool(ok and pairs), None, None, None, detail))
+
+    def check_true(self, label: str, condition, detail: str = "") -> bool:
+        return self._add(Check(label, bool(condition), None, None, None, detail))
+
+    @property
+    def n_failed(self) -> int:
+        return sum(not c.passed for c in self.checks)
+
+
+# ---------------------------------------------------------------------------
+# Running a figure script
+# ---------------------------------------------------------------------------
+def sidecar_dir(results_dir: Path = RESULTS_DIR) -> Path:
+    return Path(results_dir) / CFG.thesis.results_subdir / "figures"
+
+
+def figure_dir(figures_dir: Path = FIGURES_DIR) -> Path:
+    return Path(figures_dir) / CFG.thesis.figure_subdir
+
+
+def run_figure(spec: FigureSpec, build, argv=None, *, figures_dir: Path = FIGURES_DIR,
+               results_dir: Path = RESULTS_DIR) -> int:
+    """Build, audit, save and document one thesis figure; returns the exit code."""
+    ap = argparse.ArgumentParser(description=f"{spec.name}: {spec.title}")
+    ap.add_argument("--no-save", action="store_true", help="run the checks only, write nothing")
+    ap.add_argument("--quiet", action="store_true", help="print only the summary line")
+    ap.add_argument("--latex", action="store_true", help="render text with a LaTeX installation")
+    args = ap.parse_args(argv)
+
+    t0 = time.perf_counter()
+    ctx = Context(spec, results_dir=results_dir, verbose=not args.quiet)
+    import matplotlib.pyplot as plt
+
+    with thesis_style(use_latex=args.latex):
+        fig = build(ctx)
+        for rule, ok, detail in audit_style(fig, spec.width):
+            ctx._add(Check(f"style: {rule}", ok, None, None, None, detail))
+        paths = []
+        if not args.no_save:
+            paths = save_thesis_figure(fig, spec.name, figure_dir(figures_dir),
+                                       CFG.thesis.formats, CFG.thesis.png_dpi)
+    plt.close(fig)
+
+    n_pass = len(ctx.checks) - ctx.n_failed
+    record = {
+        "name": spec.name,
+        "number": spec.number,
+        "slug": spec.slug,
+        "chapter": spec.chapter,
+        "phases": list(spec.phases),
+        "title": spec.title,
+        "caption": spec.caption,
+        "width": spec.width,
+        "command": f"python experiments\\thesis\\{spec.name}.py",
+        "outputs": [p.relative_to(Path(figures_dir).parent).as_posix() for p in paths],
+        "inputs": ctx.inputs,
+        "params": ctx.params,
+        "notes": ctx.notes,
+        "checks": [c.__dict__ | {"line": c.line()} for c in ctx.checks],
+        "n_passed": n_pass,
+        "n_failed": ctx.n_failed,
+        "code_commit": _git_commit(),
+        "python": platform.python_version(),
+        "seconds": round(time.perf_counter() - t0, 2),
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+    }
+    if not args.no_save:
+        out = sidecar_dir(results_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        (out / f"{spec.name}.json").write_text(json.dumps(_json_safe(record), indent=2), encoding="utf-8")
+
+    print(f"{spec.name}: {n_pass} checks passed, {ctx.n_failed} failed, "
+          f"{len(ctx.notes)} notes ({record['seconds']:.1f} s)")
+    return 1 if (ctx.n_failed and CFG.thesis.strict) else 0
+
+
+# ---------------------------------------------------------------------------
+# Analysis helpers shared by the figure scripts
+# ---------------------------------------------------------------------------
+def field_index(h, value: float) -> int:
+    """Index of `value` in a field grid (exactly one match required)."""
+    hit = np.flatnonzero(np.isclose(np.asarray(h, dtype=float), value, atol=1e-9))
+    if hit.size != 1:
+        raise ValueError(f"field {value} found {hit.size} times in the grid")
+    return int(hit[0])
+
+
+def chord_log(n_qubits: int, boundary: str, ell=None) -> np.ndarray:
+    """ln[(2N/pi) sin(pi l/N)] (open) or ln[(N/pi) sin(pi l/N)] (periodic)."""
+    ell = np.arange(1, n_qubits) if ell is None else np.asarray(ell, dtype=float)
+    pref = 2.0 * n_qubits / np.pi if boundary == "open" else n_qubits / np.pi
+    return np.log(pref * np.sin(np.pi * ell / n_qubits))
+
+
+def cc_fit(profile, n_qubits: int, boundary: str, ell_min: int = 2) -> tuple:
+    """
+    Calabrese-Cardy fit of S(l) over ell_min <= l <= N/2 (the Phase 1 and 3
+    convention): S = (c/6) x + s' (open) or (c/3) x + s (periodic), x = chord_log.
+    profile[k] is S at cut l = k + 1. Returns (c, standard error of c or NaN
+    with two points, constant). Ordinary least squares.
+    """
+    ell = np.arange(ell_min, n_qubits // 2 + 1)
+    if ell.size < 2:
+        return float("nan"), float("nan"), float("nan")
+    x = chord_log(n_qubits, boundary, ell)
+    y = np.asarray(profile, dtype=float)[ell - 1]
+    A = np.vstack([x, np.ones_like(x)]).T
+    coef = np.linalg.lstsq(A, y, rcond=None)[0]
+    scale = 6.0 if boundary == "open" else 3.0
+    err = float("nan")
+    if ell.size > 2:
+        r = y - A @ coef
+        cov = (r @ r) / (ell.size - 2) * np.linalg.inv(A.T @ A)
+        err = scale * float(np.sqrt(cov[0, 0]))
+    return scale * float(coef[0]), err, float(coef[1])
+
+
+def exp_decay_fit(n, var) -> tuple:
+    """Fit Var = A exp(-b N) by least squares in ln Var; returns (b, error of b, A)."""
+    n = np.asarray(n, dtype=float)
+    y = np.log(np.asarray(var, dtype=float))
+    A = np.vstack([n, np.ones_like(n)]).T
+    coef = np.linalg.lstsq(A, y, rcond=None)[0]
+    r = y - A @ coef
+    err = float(np.sqrt((r @ r) / max(n.size - 2, 1) * np.linalg.inv(A.T @ A)[0, 0]))
+    return -float(coef[0]), err, float(np.exp(coef[1]))
+
+
+def extrapolation_weights(scales, degree: int) -> np.ndarray:
+    """
+    Weights c_k with E* = sum_k c_k E(lambda_k): least-squares polynomial of the
+    given degree through (lambda_k, E_k), evaluated at lambda = 0. degree =
+    len(scales) - 1 is Richardson extrapolation (exact interpolation); degree 1
+    with three scales is the linear least-squares fit of Phase 5.
+    """
+    lam = np.asarray(scales, dtype=float)
+    V = np.vander(lam, degree + 1, increasing=True)          # [k, j] = lambda_k^j
+    return np.linalg.pinv(V)[0]                              # row of the constant term
+
+
+def error_budget_phase4(strength, n_1q: int, n_2q: int):
+    """Phase 4 error budget lambda = p (n_1q + n_2q), all channels (two-qubit factor 1)."""
+    return np.asarray(strength, dtype=float) * (n_1q + n_2q)
+
+
+def error_budget_phase5(channel: str, strength, n_1q: int, n_2q: int):
+    """
+    Phase 5 error budget: lambda = p (n_1q + 10 n_2q) for depolarizing and the
+    hardware-like (realistic) model, p (n_1q + 2 n_2q) for amplitude damping and
+    dephasing (one channel per qubit a two-qubit gate touches).
+    """
+    factor = 10.0 if channel in ("depolarizing", "realistic") else 2.0
+    return np.asarray(strength, dtype=float) * (n_1q + factor * n_2q)
+
+
+def loglog_slope(x, y) -> float:
+    """Slope of ln y against ln x between two points (NaN if not both positive)."""
+    x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
+    if np.any(x <= 0) or np.any(y <= 0):
+        return float("nan")
+    return float((np.log(y[1]) - np.log(y[0])) / (np.log(x[1]) - np.log(x[0])))
+
+
+def summarize_hc(hc, hc_rep=None) -> dict:
+    """
+    Phase 7 statistics of h_c^ML (same estimator as ml.classifiers.summarize_hc):
+    mean and spread over seeds (last axis, NaN = no crossing ignored), shot
+    standard error from the test repetitions, total = quadrature sum.
+    """
+    import warnings
+    hc = np.asarray(hc, dtype=float)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        mean = np.nanmean(hc, axis=-1)
+        seed_std = np.nanstd(hc, axis=-1, ddof=1) if hc.shape[-1] > 1 else np.zeros_like(mean)
+        out = {"mean": mean, "seed_std": seed_std, "n_valid": np.sum(np.isfinite(hc), axis=-1)}
+        if hc_rep is not None:
+            hr = np.asarray(hc_rep, dtype=float)
+            n = np.sum(np.isfinite(hr), axis=-1)
+            sd = np.nanstd(hr, axis=-1, ddof=1)
+            se = np.where(n > 1, sd / np.sqrt(np.maximum(n, 1)), np.nan)
+            out["shot_se"] = np.nanmean(se, axis=-1)
+            out["total"] = np.sqrt(np.nan_to_num(seed_std) ** 2 + np.nan_to_num(out["shot_se"]) ** 2)
+    return out
+
+
+def table_value(rows: list, column: str, **match) -> float:
+    """
+    One numeric cell of a Phase 7 CSV table; numeric match values are compared
+    after formatting as the table does (strength and lambda with 4 significant
+    figures). NaN if the row is missing or the cell reads "nan".
+    """
+    def same(cell: str, v) -> bool:
+        if isinstance(v, (float, np.floating)):
+            try:
+                return np.isclose(float(cell), float(f"{float(v):.4g}"), rtol=1e-9, atol=0.0)
+            except ValueError:
+                return False
+        return cell == str(v)
+    for r in rows:
+        if all(same(r.get(k, ""), v) for k, v in match.items()):
+            try:
+                return float(r[column])
+            except (ValueError, KeyError):
+                return float("nan")
+    return float("nan")
+
+
+def drift_onset(mean, total, strengths, n_sigma: float = 2.0) -> int:
+    """
+    Index of the first strength > 0 where h_c^ML moves by more than n_sigma
+    combined standard deviations from its p = 0 value (Phase 7 definition; a
+    missing crossing does not count as drift). -1 if none.
+    """
+    mean, total = np.asarray(mean, dtype=float), np.asarray(total, dtype=float)
+    with np.errstate(invalid="ignore"):
+        drift = np.abs(mean - mean[0]) > n_sigma * np.sqrt(total ** 2 + total[0] ** 2)
+    hit = np.flatnonzero(drift & (np.asarray(strengths) > 0))
+    return int(hit[0]) if hit.size else -1
+
+
+def isotonic_ends(P):
+    """
+    First and last value of the non-decreasing isotonic (pool adjacent
+    violators) fit of P along the last axis, in closed form: the minimum of the
+    prefix means and the maximum of the suffix means.
+    """
+    P = np.asarray(P, dtype=float)
+    n = P.shape[-1]
+    k = np.arange(1, n + 1)
+    prefix = np.cumsum(P, axis=-1) / k
+    suffix = np.cumsum(P[..., ::-1], axis=-1)[..., ::-1] / k[::-1]
+    return prefix.min(axis=-1), suffix.max(axis=-1)
+
+
+def crossing_consistent(hc, P, threshold: float = 0.5) -> tuple:
+    """
+    Check the Phase 7 estimator: h_c^ML is missing (NaN) exactly when the
+    isotonic fit of the field-averaged output P never crosses the threshold.
+    Returns (number of inconsistent entries, number of missing crossings).
+    """
+    lo, hi = isotonic_ends(P)
+    with np.errstate(invalid="ignore"):
+        crosses = (lo < threshold) & (hi >= threshold)
+    missing = ~np.isfinite(np.asarray(hc, dtype=float))
+    return int(np.sum(crosses == missing)), int(missing.sum())
