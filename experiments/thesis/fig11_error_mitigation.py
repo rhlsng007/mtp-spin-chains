@@ -58,7 +58,8 @@ SPEC = FigureSpec(
              "p10 = 0.02), against the gate-error strength p (bottom) and the error budget "
              "lambda (top). (a) HVA and (b) HEA with exact expectation values: unmitigated, readout-"
              "corrected, zero-noise extrapolation alone (Richardson, global folding, scales 1, 3, 5) "
-             "and both combined. The dashed line is the noiseless VQE error. (c) RMS error over 50 "
+             "and both combined; readout correction is exact at p = 0, where its error is not drawn. "
+             "The dashed line is the noiseless VQE error. (c) RMS error over 50 "
              "repetitions with 10,000 shots per basis and scale (HVA solid, HEA dashed): shot noise "
              "sets a floor, amplified about 2.3 times by the extrapolation."),
 )
@@ -67,6 +68,21 @@ ANSATZE = (("hva", "HVA"), ("hea", "HEA"))
 METHODS = (("raw", "unmitigated"), ("readout", "readout corrected"), ("zne", "ZNE only"),
            ("combined", "readout + ZNE"))
 FLOOR = 1e-16
+
+
+def recovery_strength(s, delta, target) -> float:
+    """Largest strength up to which delta stays below target, log-interpolated (NaN if never)."""
+    ok = (s > 0) & (delta < target)
+    if not ok[s > 0][0]:
+        return float("nan")
+    k = int(np.flatnonzero(s > 0)[0])
+    while k + 1 < len(s) and delta[k + 1] < target:
+        k += 1
+    if k + 1 == len(s):
+        return float(s[k])
+    x0, x1 = np.log(s[k]), np.log(s[k + 1])
+    y0, y1 = np.log(delta[k]), np.log(delta[k + 1])
+    return float(np.exp(x0 + (np.log(target) - y0) * (x1 - x0) / (y1 - y0)))
 
 
 def estimates(d, w, fold: int = 0) -> dict:
@@ -128,6 +144,10 @@ def build(ctx):
     ctx.check_close("shot spread of 50 repetitions matches the analytic variance (median ratio)", rat, 1.0,
                     atol=mt.variance_ratio_tol, detail="chi-squared with 49 degrees of freedom has median 0.986")
 
+    dref = files["hva", Np, Np // 2, ch]
+    n_1q, n_2q = int(dref["n_1q"]), int(dref["n_2q"])
+    lam_per_p = float(error_budget_phase5(ch, 1.0, n_1q, n_2q))
+    lam_ref = lam_per_p
     ref = report.get("reference_point", {}).get("data", {})
     est, delta, eps_vqe = {}, {}, {}
     for a, name in ANSATZE:
@@ -141,16 +161,14 @@ def build(ctx):
     ctx.check_close(f"readout bias at zero noise (reference point) equals the Phase 5 report", mine, theirs,
                     atol=th.identity_tol)
 
-    dref = files["hva", Np, Np // 2, ch]
-    n_1q, n_2q = int(dref["n_1q"]), int(dref["n_2q"])
-    lam_per_p = float(error_budget_phase5(ch, 1.0, n_1q, n_2q))
     for a, name in ANSATZE:
         for k, label in METHODS:
             dd = delta[a][k]
-            reach = [float(x) for x, y in zip(s, dd) if x > 0 and y < eps_vqe[a]]
+            pr = recovery_strength(s, dd, eps_vqe[a])
             ctx.note(f"{name} {label}: delta at p = 1e-4 {dd[np.argmin(np.abs(s - 1e-4))]:.2e}, "
-                     f"1e-3 {dd[np.argmin(np.abs(s - 1e-3))]:.2e}; at VQE accuracy "
-                     f"({eps_vqe[a]:.2e}) up to p = {max(reach) if reach else 'never'}")
+                     f"1e-3 {dd[np.argmin(np.abs(s - 1e-3))]:.2e}; at VQE accuracy ({eps_vqe[a]:.2e}) up to "
+                     + (f"p = {pr:.2e} (lambda = {pr * lam_ref:.3f}, log-interpolated)" if np.isfinite(pr)
+                        else "no strength"))
     ctx.note(f"lambda = {lam_per_p:g} p at N = {Np}, p = {Np // 2} (both ansaetze)")
 
     # -- shots -------------------------------------------------------------------------
@@ -172,10 +190,11 @@ def build(ctx):
     fig, axes = thesis_figure(ncols=3, aspect=0.38)
     for ax, (a, name) in zip(axes[:2], ANSATZE):
         for k, label in METHODS:
-            ax.loglog(x, np.maximum(delta[a][k], FLOOR), "o-", color=MITIGATION_COLORS[k], ms=2.5,
-                      lw=1.0, label=label)
+            dd = delta[a][k]
+            keep = dd > 1e-12                    # exact readout correction gives 0 at p = 0: not drawn
+            ax.loglog(x[keep], dd[keep], "o-", color=MITIGATION_COLORS[k], ms=2.5, lw=1.0, label=label)
         reference_line(ax, eps_vqe[a], color=COLORS["black"], lw=0.7)
-        ax.text(x[1], eps_vqe[a] * 1.6, "noiseless VQE error", va="bottom", ha="left")
+        ax.text(x[-1], eps_vqe[a] / 1.8, "noiseless VQE error", va="top", ha="right")
         ax.set_ylim(1e-8, 2.0)
         ax.set_title(name, loc="right")
     for a, name in ANSATZE:
@@ -190,7 +209,10 @@ def build(ctx):
                       r"RMS $\delta$ over repetitions")
         label_zero_strength(ax, x0)
         add_secondary_scale(ax, lam_per_p, r"$\lambda$")
-    axes[0].legend(loc="lower right")
+    axes[1].legend(loc="lower right")
+    hs = [axes[2].plot([], [], "o-", color=COLORS["black"], ms=2.2, label="solid: HVA")[0],
+          axes[2].plot([], [], "s--", color=COLORS["black"], ms=2.2, mfc="none", label="dashed: HEA")[0]]
+    axes[2].legend(handles=hs, loc="upper left")
     panel_labels(axes)
     return fig
 

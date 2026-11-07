@@ -137,7 +137,7 @@ def build(ctx):
 
     # -- figure --------------------------------------------------------------------
     x, x0 = zero_strength_positions(s)
-    fig, axes = thesis_figure(ncols=3, aspect=0.36)
+    fig, axes = thesis_figure(ncols=3, aspect=0.42)
     panels = ((axes[0], "depolarizing", "rel_error"), (axes[1], "amplitude_damping", "rel_error"),
               (axes[2], "amplitude_damping", "E_N"))
     for ax, ch, key in panels:
@@ -167,16 +167,14 @@ def build(ctx):
         ax.set_title({"depolarizing": "depolarizing", "amplitude_damping": "amplitude damping"}[ch],
                      loc="right")
         label_zero_strength(ax, x0)
-    handles = [axes[2].plot([], [], "-", color=COLORS["black"], label="A: noiseless optimum")[0],
-               axes[2].plot([], [], ":", color=COLORS["black"], label="warm start, trained")[0],
-               axes[2].plot([], [], "--", color=COLORS["black"], label="cold starts (median), trained")[0],
-               axes[2].plot([], [], "--", color=COLORS["grey"], lw=0.7,
-                            label=r"$\epsilon_{\mathrm{prod}}$ in (a), (b)")[0]]
-    leg = axes[2].legend(handles=handles, loc="lower left")
-    axes[2].add_artist(leg)
-    hs = [axes[2].plot([], [], ANSATZ_MARKERS[n], color=SERIES_COLORS[n], ms=3, label=n)[0]
-          for _, n in ANSATZE]
-    axes[2].legend(handles=hs, loc="upper right")
+    handles = [axes[2].plot([], [], ANSATZ_MARKERS[n], color=SERIES_COLORS[n], ms=3, label=n)[0]
+               for _, n in ANSATZE]
+    handles += [axes[2].plot([], [], "-", color=COLORS["black"], label="A: noiseless optimum")[0],
+                axes[2].plot([], [], ":", color=COLORS["black"], label="warm start, trained")[0],
+                axes[2].plot([], [], "--", color=COLORS["black"], label="cold starts (median), trained")[0],
+                axes[2].plot([], [], "--", color=COLORS["grey"], lw=0.7,
+                             label=r"$\epsilon_{\mathrm{prod}}$ (product-state bound)")[0]]
+    fig.legend(handles=handles, loc="outside lower center", ncol=3)
     panel_labels(axes)
     return fig
 

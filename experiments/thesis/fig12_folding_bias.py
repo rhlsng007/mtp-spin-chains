@@ -38,8 +38,7 @@ import numpy as np
 from config import CFG
 from experiments.thesis.figlib import (FigureSpec, error_budget_phase5, extrapolation_weights, field_index,
                                        run_figure)
-from utils.plotting import (CHANNEL_COLORS, CHANNEL_LABELS, COLORS, label_zero_strength, panel_labels,
-                            thesis_figure, zero_strength_positions)
+from utils.plotting import CHANNEL_COLORS, CHANNEL_LABELS, COLORS, panel_labels, thesis_figure
 
 SPEC = FigureSpec(
     number=12,
@@ -135,19 +134,18 @@ def build(ctx):
              f"(report {report.get('local_over_global_residual', {}).get('median')})")
 
     # -- figure --------------------------------------------------------------------
-    x, x0 = zero_strength_positions(s)
+    pos_s = s > 0                                    # no error at p = 0: start at the weakest noise
     fig, axes = thesis_figure(ncols=3, aspect=0.38)
     for ax, (a, name) in zip(axes[:2], ANSATZE):
         for c in channels:
             e = errors(files[a, Np, Np // 2, c], folds.index(g))
-            ax.loglog(x, np.maximum(e["raw"][:, ih], FLOOR), "-", color=CHANNEL_COLORS[c], lw=0.6)
-            ax.loglog(x, np.maximum(e["richardson"][:, ih], FLOOR), "o-", color=CHANNEL_COLORS[c], lw=1.2,
-                      ms=2.5, label=CHANNEL_LABELS[c])
-        ax.set_ylim(1e-14, 2.0)
+            ax.loglog(s[pos_s], np.maximum(e["raw"][pos_s, ih], FLOOR), "-", color=CHANNEL_COLORS[c], lw=0.6)
+            ax.loglog(s[pos_s], np.maximum(e["richardson"][pos_s, ih], FLOOR), "o-", color=CHANNEL_COLORS[c],
+                      lw=1.2, ms=2.5, label=CHANNEL_LABELS[c])
+        ax.set_ylim(1e-16, 2.0)
         ax.set_xlabel("gate-error strength $p$")
         ax.set_ylabel(r"$|E - E_{\mathrm{ideal}}|/|E_0|$")
         ax.set_title(f"{name}, $N={Np}$, $p={Np // 2}$", loc="right")
-        label_zero_strength(ax, x0)
     axes[0].legend(loc="lower right")
     hs = [axes[1].plot([], [], "-", color=COLORS["black"], lw=0.6, label="unmitigated")[0],
           axes[1].plot([], [], "o-", color=COLORS["black"], lw=1.2, ms=2.5, label="Richardson ZNE")[0]]

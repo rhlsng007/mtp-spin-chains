@@ -35,7 +35,7 @@ import numpy as np
 
 from config import CFG
 from experiments.thesis.figlib import FigureSpec, error_budget_phase4, run_figure
-from utils.plotting import (CHANNEL_COLORS, CHANNEL_LABELS, COLORS, SERIES_COLORS, ANSATZ_MARKERS,
+from utils.plotting import (CHANNEL_LABELS, COLORS, SERIES_COLORS, ANSATZ_MARKERS,
                             panel_labels, thesis_figure)
 
 SPEC = FigureSpec(
@@ -150,14 +150,15 @@ def build(ctx):
         m, lo, hi, _ = kap[ch]
         ax.fill_between(lam_line, 1 - np.exp(-lo * lam_line), 1 - np.exp(-hi * lam_line),
                         color=COLORS["grey"], alpha=0.25, lw=0)
-        ax.loglog(lam_line, 1 - np.exp(-m * lam_line), color=COLORS["black"], lw=0.9,
-                  label=rf"$1-e^{{-\kappa\lambda}}$, $\kappa={m:.2f}$")
+        ax.loglog(lam_line, 1 - np.exp(-m * lam_line), color=COLORS["black"], lw=0.9)
+        ax.text(0.96, 0.04, rf"$1-e^{{-\kappa\lambda}}$, $\kappa={m:.2f}$", transform=ax.transAxes,
+                ha="right", va="bottom")
         ax.set_xlim(lam_line[0], lam_line[-1])
         ax.set_ylim(1e-4, 1.5)
         ax.set_xlabel(r"error budget $\lambda = p\,(n_{1q}+n_{2q})$")
         ax.set_ylabel(r"$1 - F_{\mathrm{ideal}}$")
-        ax.set_title(CHANNEL_LABELS.get(ch, ch), loc="right", color=CHANNEL_COLORS.get(ch, "k"))
-        leg = ax.legend(loc="lower right", markerscale=2.5)
+        ax.set_title(CHANNEL_LABELS.get(ch, ch), loc="right")
+        leg = ax.legend(loc="upper left", markerscale=2.5)
         for hnd in leg.legend_handles:
             hnd.set_alpha(1.0)
     panel_labels(axes)
