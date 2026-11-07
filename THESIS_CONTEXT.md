@@ -42,6 +42,7 @@ Scripts are always run from the project root, e.g. `python experiments\phase1_ed
 - Screen-off also triggers Modern Standby (found in Phase 4: a 30-minute screen timeout caused a 7-minute pause). For long runs set `powercfg /change monitor-timeout-ac 0` and the lid action on mains to "do nothing" (`powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0`, then `powercfg /setactive SCHEME_CURRENT`); restore the screen timeout afterwards.
 - Measured noisy-simulation cost (Phase 4): about 0.25 s per N = 8 density-matrix energy evaluation with 12 workers under full load, about 5 times the single-core speed (memory-bandwidth contention and efficiency cores). Budget long noisy runs from this rate. Progress lines appear only when a whole job finishes; check liveness with `Get-Process python | Select-Object Id, CPU`.
 - Phase 5 ZNE run (72 jobs, 12 workers): 1,932 s; the longest jobs are HEA N = 8, p = 4 (1,200 to 1,370 s each), so the wall time is set by the N = 8 jobs.
+- Phase 8 thesis figures (16 scripts, 4 in parallel): about 8 s; inventory 10 to 30 s.
 - Phase 7 classification run (57 jobs, 12 workers): 197 s; the longest jobs are the 18 noise jobs (89 to 101 s each); `phase7_plots.py` about 1 minute.
 - Phase 6 dataset run (38 jobs, 12 workers): 170 s; the longest jobs are the N = 8 noisy and ZNE runs (120 to 170 s each) and ED N = 14 (96 s).
 - Archives: Windows `tar` (`tar -a -c -f out.zip <folders>`) instead of `Compress-Archive` for large folders; check the entry count with `tar -t -f out.zip`.
@@ -73,7 +74,8 @@ mtp-spin-chains/
 ├── scripts/               # check_env.py, phase2_report_data.py, phase3_report_data.py,
 │                          # phase4_diag_negativity.py, phase4_diag_training.py,
 │                          # phase4_report_data.py, phase5_report_data.py
-├── tests/                 # test_phase0.py ... test_phase7.py (364 tests)
+├── tests/                 # test_phase0.py ... test_phase8.py, test_phase8_notes.py (404 tests)
+├── notes/                 # Results notes per phase (Phase 8, T8.3)
 ├── results/               # .npz data + .json metadata (gitignored; back up separately)
 └── figures/               # .pdf tracked in git, .png gitignored
 ```
@@ -434,7 +436,7 @@ $$
 
 **Open, not blocking:**
 
-- [ ] Optional housekeeping: move the legend in the top-right panel of `vqe_error_vs_depth`; drop the PDF `CreationDate` in `utils/plotting.py` so re-plotting does not mark PDFs as modified; add a `-dirty` flag to the git commit recorded by `utils/io.py`.
+- [x] Done in Phase 8 (thesis Figure 3 replaces the figure; deterministic PDFs; `-dirty` commit flag). Former item: move the legend in the top-right panel of `vqe_error_vs_depth`; drop the PDF `CreationDate` in `utils/plotting.py` so re-plotting does not mark PDFs as modified; add a `-dirty` flag to the git commit recorded by `utils/io.py`.
 - [ ] Check the 14 references of the Phase 2 report before submission.
 - [ ] Check the 9 references of the Phase 3 report before submission.
 - [ ] Check the references of the Phase 4 report before submission.
@@ -660,7 +662,7 @@ $$
 
 ## 14. Phase 7: completed
 
-**Status:** done; merged into `main` with tag `phase7-complete` (merge hash: `git rev-parse --short phase7-complete`). Code at 87d4b42 (results produced at this commit); results, figures, summary and tables in 9b4a766. `pytest -q`: 364 tests pass (14 for Phase 7). `experiments\phase7_plots.py`: 11 checks passed, 0 failed, 64 notes. Report: the Claude Doc "Phase 7: Machine-Learning Phase Classification of the Transverse-Field Ising Chain under Noise" (https://claude.ai/artifact/9zsruXJk6he4vvVPiGg7YA). T7.5 (QCNN on the cluster-Ising model) skipped by decision; optional future work.
+**Status:** done; merged into `main` with tag `phase7-complete` (merge hash: `git rev-parse --short phase7-complete`), `phase8-complete` (<P8_MERGE>). Code at 87d4b42 (results produced at this commit); results, figures, summary and tables in 9b4a766. `pytest -q`: 364 tests pass (14 for Phase 7). `experiments\phase7_plots.py`: 11 checks passed, 0 failed, 64 notes. Report: the Claude Doc "Phase 7: Machine-Learning Phase Classification of the Transverse-Field Ising Chain under Noise" (https://claude.ai/artifact/9zsruXJk6he4vvVPiGg7YA). T7.5 (QCNN on the cluster-Ising model) skipped by decision; optional future work.
 
 **How to run (from the project root, after Phase 6):**
 
@@ -705,7 +707,7 @@ $$
 - Validation: classifiers on ED features equal those on free-fermion correlators (1.1e-14); strength-0 noisy data reproduce the noiseless VQE classifiers (5.6e-15, ED-trained 2.1e-14); ro equals gate at p = 0 (exactly); shadow and exact h_c^ML agree (12 of 12 within 3 sigma + 0.02); PC1 correlates with M^2 at 0.9975 to 0.9999; shadow rebuild and live rerun exact; deep-field accuracy 100 %. The ED and free-fermion numbers equal an independent sandbox run to every printed digit.
 - Clean: h_c^ML (LR, exact) = 0.761, 0.798, 0.826, 0.845, 0.860, 0.871 for N = 4 to 14; free fermions 0.878, 0.901, 0.917, 0.928, 0.936 for N = 16, 24, 32, 48, 64; 1/N extrapolation 0.954 (below h_c; fixed-threshold hypothesis, not derived). Shadows (LR): 0.781 to 0.883, sigma_tot 0.003 to 0.008. MLP 0.01 to 0.04 higher, seed spread 0.015 to 0.021. PCA midpoint 0.729 to 0.868, PC1 explains 99 % of the variance.
 - VQE: an ED-trained classifier transfers to HEA states (h_c^ML 0.740 to 0.874, accuracy 0.88 to 0.95) but not to HVA at p = N/2 (0.59 to 0.66, accuracy 0.80 to 0.83: ordered-phase M^2 about 0.65); HVA at p = N recovers (0.80 to 0.86).
-- Noise (N = 8, ro, LR shadows): clean-trained classifiers drift by 2 sigma from lambda = 0.15 (train ED) and 0.32 (train noiseless circuit) and give no crossing at p = 1e-2 (everything disordered). Train = test noise keeps accuracy 0.93 (HVA) and 0.91 (HEA) at lambda = 3.2 (F about 0.1), h_c^ML 0.872 to 0.802 and 0.837 to 0.796. Mixed training: accuracy 0.91 to 0.94 throughout, drift onset lambda = 0.69 (HVA) and 1.49 (HEA). Leave-one-out fails only at the strongest strength (extrapolation): 0.982 (HVA), 0.741 (HEA). N = 4: no 2-sigma drift in any mode (lambda at most about 0.7); N = 6 clean-trained drift from lambda = 0.17 to 0.81.
+- Noise (N = 8, ro, LR shadows): clean-trained classifiers drift by 2 sigma from lambda = 0.15 (train ED) and 0.32 (train noiseless circuit) and give no crossing at p = 1e-2 (everything disordered). Train = test noise keeps accuracy 0.93 (HVA) and 0.91 (HEA) at lambda = 3.2 (F about 0.1), h_c^ML 0.872 to 0.802 and 0.837 to 0.796. Mixed training: accuracy 0.91 to 0.94 throughout, drift onset lambda = 0.69 (HVA) and 1.49 (HEA). Leave-one-out fails only at the strongest strength (extrapolation): 0.982 (HVA), 0.741 (HEA). N = 4 (lambda at most about 0.7): only the ED-trained HVA drifts, from lambda = 0.33, starting from an already misplaced 0.623 (the p = N/2 transfer failure; corrected in Phase 8, the earlier text said no mode drifts); N = 6 clean-trained drift from lambda = 0.17 to 0.81.
 - ZNE (window lambda = 0.07 to 0.17): exact feature error cut to 0.7 to 5.6 % of the unmitigated error; h_c^ML within 0.004 of the noiseless circuit at all 12 points (N = 8: HVA 0.850 / 0.827 to 0.870 / 0.868, HEA 0.804 / 0.790 to 0.816 / 0.815).
 - Statistics: sigma_tot 0.006 to 0.02, far below the shifts (0.04 to 0.7), so more shadows are not needed. Learning curves flat (22 rows within 0.015 of 352). 100 snapshots bias ED h_c^ML by +0.025 (0.845 against 0.820). Shot-SE exponent -0.56 (ED); noisy estimates (-0.27 to -0.35) rest on 4 test shadows.
 - Common window: clean-trained classification fails at lambda about 0.15 to 0.3, inside the window in which Phase 4 lost the energy witness and the hashing bound (0.1 to 0.5) and Phase 5 found ZNE effective (0.1 to 0.3).
@@ -717,3 +719,52 @@ $$
 - Use the drift of h_c^ML, not the accuracy against h < 1 / h > 1 labels, to compare noise levels: the accuracy has a finite-size ceiling (fields between h_c^ML and 1 count as errors).
 - The finite-size convergence of h_c^ML below h_c is presented as a hypothesis (fixed-threshold classifier), with the free-fermion series as evidence.
 - T7.5 (QCNN, cluster-Ising) stays optional future work; the Phase 1 cluster-Ising ED files would support it.
+
+## 15. Phase 8: completed
+
+**Status:** done; merged into `main` at <P8_MERGE>, tag `phase8-complete`. Last code commit before the merge: the Results notes (1288dc2). `pytest -q`: 404 tests pass (31 in `test_phase8.py`, 9 in `test_phase8_notes.py`). `python experiments\make_thesis_figures.py`: 16 thesis figures, 146 checks passed, 0 failed, about 8 s; a rerun leaves the committed PDFs and the manifest byte-identical. Report: the Claude Doc "Phase 8: Results Consolidation".
+
+**How to run (from the project root, after Phases 1 to 7):**
+
+- `python scripts\phase8_inventory.py` (about 10 to 30 s): inventory of all results in `results/phase8/inventory.md` and `.json`, with provenance checks (file counts, metadata, stored keys, commit ancestry).
+- `python experiments\make_thesis_figures.py` (`--only fig03 fig14`, `--workers`, `--list`): runs every `experiments/thesis/figNN_*.py` in its own process and writes `figures/thesis/MANIFEST.md` and `results/phase8/figure_checks.json`.
+- `python experiments\thesis\figNN_<slug>.py` (`--no-save`, `--quiet`, `--latex`): one figure, its checks and notes.
+
+**API:**
+
+- `experiments.thesis.figlib`: `FigureSpec(number, slug, chapter, phases, title, caption, width)`; `Context` (`load(name, subdir, require)`, `load_json`, `load_table`, `param`, `note`, `check_close`, `check_max`, `check_min`, `check_true`, `check_rounded`); `run_figure(spec, build)` (thesis style, style audit, save, sidecar, exit code); helpers `field_index`, `chord_log`, `cc_fit`, `exp_decay_fit`, `extrapolation_weights(scales, degree)`, `error_budget_phase4`, `error_budget_phase5`, `loglog_slope`, `summarize_hc` (the Phase 7 estimator), `table_value` (Phase 7 CSV cells), `drift_onset`, `isotonic_ends`, `crossing_consistent`.
+- Reusable from the figure scripts: `fig09.first_crossing` (log-interpolated crossing), `fig11.recovery_strength`, `fig11.estimates`, `fig04.sector_gaps`, `fig14.PHASE7_ONSETS`.
+- `utils.plotting` (Phase 0 API unchanged): `thesis_rc`, `thesis_style()`, `set_thesis_figure_style`, `thesis_figure(ncols, nrows, width, aspect)`, `save_thesis_figure`, `panel_labels`, `mark_critical`, `reference_line`, `add_secondary_scale`, `zero_strength_positions`, `label_zero_strength`, `audit_style`, `size_color(N)`; colour maps `SERIES_COLORS`, `CHANNEL_COLORS`, `CHANNEL_LABELS`, `MITIGATION_COLORS`, `MODE_COLORS`, `MODE_LABELS`, `ANSATZ_MARKERS`; `THESIS_WIDTHS`, `THESIS_FONT_SIZES`.
+- `utils.io`: `format_commit`, `strip_dirty`; recorded commits end in `-dirty` when tracked files had uncommitted changes.
+
+**`CFG.thesis` (added in Phase 8):** `figure_subdir="thesis"`, `results_subdir="phase8"`, `formats=("pdf","png")`, `png_dpi=300`, `strict=True`; Figure 1: `ed_sizes`, `binder_sizes`, `binder_window`, `ff_tol=1e-9`, `gap_fit_sizes=(8,10,12,14)`, `gap_fit_rtol=1e-4`, `cat_field=0.1`, `cat_entropy_tol=1e-3`, `area_law_field=2.0`, `area_law_tol=1e-4`; shared `identity_tol=1e-10`, `regression_tol=1e-4`; Figures 2 to 7: `cc_size=14`, `cc_fit_sizes`, `c_tol_tfim_periodic=0.01`, `c_tol_xxz_periodic=0.05`, `vqe_sizes`, `vqe_plot_sizes=(8,12)`, `vqe_field=1.0`, `vqe_pstar_fields`, `variational_tol=1e-10`, `exact_depth_tol=1e-9`, `pbc_exact_tol=1e-12`, `bp_fit_tol=0.03`, `bp_flat_max=0.1`, `ent_size=12`, `ent_cc_sizes=(8,10,12)`, `capacity_tol=1e-6`, `pbc_entropy_tol=1e-6`; Figures 8 to 12: `noise_size=8`, `noise_field=1.0`, `negativity_threshold=0.1`, `zero_tol=1e-10`, `hashing_rtol=0.01`, `report_rtol=1e-3`; Figures 13 to 16: `ml_main_kind="shadow"`, `ml_main_features="corr"`, `ml_main_classifier="logistic"`, `drift_sigmas=2.0`, `table_tol=5e-5`, `zne_feature_ratio_max=0.1`.
+
+**Conventions fixed in Phase 8:**
+
+- Thesis figures are drawn at printed size (6.3 in full width, 3.1 in half) with constrained layout and saved without cropping; Computer Modern text and math (`cmr10`, DejaVu Serif fallback); font sizes 8, 9 and 10 pt only; panel labels as left titles; fixed colours for ED (black), HVA (blue), HEA (orange), each system size (log-N viridis, N = 4 to 14), noise channel, mitigation stage and training mode. `audit_style` checks width, font sizes and series colours in every figure; labels beginning with "HVA", "HEA" or "ED" must use their series colour.
+- PDFs carry no creation date and PNGs no timestamp: a rerun on unchanged data leaves them byte-identical. Only PDFs and `MANIFEST.md` are tracked; PNGs, sidecars and the inventory are regenerated.
+- Every figure validates its data against exact results (free fermions, closed forms, bounds, identities between phases) and against the phase reports and tables to their printed digits. A failed check gives exit code 1.
+- Error budget per noise model: Phase 4 λ = p(n_1q + n_2q); hardware-like model (Phases 5 to 7) λ = p(n_1q + 10 n_2q); Phase 5 damping channels λ = p(n_1q + 2 n_2q). The common axis of Figure 16 is the expected number of gate errors per circuit.
+- Definitions recovered from the reports: p* near h_c is the hardest field near h_c; Phase 4 "cold" values are the median of the three cold starts; the Phase 3 Fannes–Audenaert bound uses 1 − F ≥ 1e-14 (the stored bound has no floor); a missing h_c^ML means the isotonic fit never crosses 1/2 (accuracy need not be 20/38).
+
+**Saved files:**
+
+- `figures/thesis/fig01_tfim_ed_baseline` to `fig16_error_budget_window` (`.pdf` tracked, `.png` ignored); `figures/thesis/MANIFEST.md` (tracked: caption, command, parameters, inputs with commits, checks and notes of every figure; no timestamps).
+- `results/phase8/`: `inventory.md`, `inventory.json`, `figures/figNN_*.json` (sidecars with run time, code commit and input hashes), `figure_checks.json`. All regenerated; nothing to back up beyond Phases 1 to 7.
+- `notes/README.md` and `notes/phase1_*.md` to `phase8_*.md`: the Results notes (T8.3), one per phase with status, parameters, key observations, failures and thesis figures.
+
+**Thesis figures:** 1 TFIM ED baseline, 2 central charges, 3 VQE error against depth and p*(h), 4 error against field and parity floor, 5 barren plateaus, 6 VQE entanglement and capacity, 7 central charge against depth, 8 fidelity collapse, 9 mixed-state entanglement, 10 training under noise, 11 error mitigation, 12 folding bias, 13 clean classification, 14 h_c^ML against noise (central), 15 accuracy and ZNE, 16 the common error-budget window.
+
+**Key results:**
+
+- Inventory: 865 result files (85, 182, 62, 182, 158, 78, 118 per phase), every one with metadata, matching stored keys and a producing commit in the current history.
+- Reproduction: the figures recompute the phase results from the saved data and match the reports and tables to their printed digits (κ, hashing and witness thresholds, sudden death, training values, folding-bias medians, recovery strengths, Phase 7 h_c^ML, σ_tot and accuracies, drift onsets).
+- Unifying result (Figure 16, N = 8, p = 4, h = J): the clean-trained classifiers drift at λ = 0.15 (ED) and 0.32 (noiseless circuit), inside the window λ = 0.113 to 0.518 where Phase 4 loses the energy witness and the hashing bound; readout + ZNE reaches VQE accuracy up to λ = 0.31 (HVA) and 0.11 (HEA); the ZNE window of the classifier inputs is λ = 0.069 to 0.149; noise-aware (mixed) training moves the threshold to 0.69 and 1.49.
+- Findings of the consolidation (no result file changed): the stored Fannes–Audenaert bound lacks its fidelity floor (9 states with F_GS = 1 exceed it by up to 6.6e-9); p* at exactly h = J differs from the hardest p* near h_c; Phase 4 cold values are medians; missing crossings do not imply accuracy 20/38 (0.526 to 0.592); the symmetry-broken reference has no meaning in the paramagnet; colours were reused across phases in the synthesis figure; the Phase 7 text "N = 4: no 2-sigma drift in any mode" was wrong (the ED-trained HVA drifts at λ = 0.33).
+
+**Decisions taken at the end of Phase 8:**
+
+- The thesis uses only `figures/thesis/` (16 figures); captions start from `MANIFEST.md`, the Results chapter from `notes/`. Phase figures in `figures/phaseN/` remain working figures.
+- State the two error-budget definitions once in the text where Figure 16 is introduced.
+- Present the finite-size drift of h_c^ML below h_c as a hypothesis (fixed-threshold classifier; free-fermion extrapolation 0.955).
+- Still open before submission: correct the N = 4 sentence in the Phase 7 report; check the references of the Phase 2 to 7 reports; the literature check of the half-final-layer folding bias. T7.5 (QCNN, cluster-Ising) stays optional future work.
