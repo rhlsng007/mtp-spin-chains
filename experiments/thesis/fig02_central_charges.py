@@ -119,9 +119,9 @@ def build(ctx):
         draw(ax_x, key, b, label, color, marker)
     ax_t.set_xlabel(r"$\ln\!\left[\frac{aN}{\pi}\sin\frac{\pi\ell}{N}\right]$, $a=2$ open, $1$ periodic")
     ax_x.set_xlabel(r"$\ln\!\left[\frac{N}{\pi}\sin\frac{\pi\ell}{N}\right]$")
-    for ax in (ax_t, ax_x):
+    for ax, loc in ((ax_t, "center right"), (ax_x, "lower right")):
         ax.set_ylabel(r"$S(\ell)$")
-        ax.legend(loc="lower right")
+        ax.legend(loc=loc)
         lo, hi = ax.get_ylim()
         ax.set_ylim(lo, hi + 0.12 * (hi - lo))          # room for the panel caption
     ax_t.text(0.04, 0.96, f"TFIM, $N={big}$, $h=J$", transform=ax_t.transAxes, ha="left", va="top")

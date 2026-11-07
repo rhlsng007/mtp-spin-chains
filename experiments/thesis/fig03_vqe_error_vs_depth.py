@@ -7,7 +7,8 @@ Panels
   (a) HVA: relative energy error against depth p at h = CFG.thesis.vqe_field
   (b) HEA: the same
   (c) required depth p* (smallest p with error below CFG.vqe.target_rel_error)
-      against N, at the fields CFG.thesis.vqe_pstar_fields
+      against h for the largest N in CFG.thesis.vqe_plot_sizes; crosses at p = N + 1 mark
+      fields where no depth p <= N reaches the target
 
 The relative error is
 
@@ -21,6 +22,8 @@ Validation (every file: N = 4 to 12, p = 1 to N, all 39 fields)
   * HVA: the error never increases with p (depth warm start).
   * Periodic HVA at p = N/2 is exact (Ho and Hsieh).
   * Fidelities lie in [0, 1] and F_GS >= F.
+  * p*(h) equals the Phase 2 report (required_depth_vs_field) at every field,
+    size and ansatz.
 """
 
 import sys
@@ -29,10 +32,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import numpy as np
+from matplotlib.ticker import MaxNLocator
 
 from config import CFG
 from experiments.thesis.figlib import FigureSpec, field_index, run_figure
-from utils.plotting import (COLORS, SERIES_COLORS, ANSATZ_MARKERS, panel_labels, reference_line,
+from utils.plotting import (COLORS, SERIES_COLORS, ANSATZ_MARKERS, mark_critical, panel_labels, reference_line,
                             size_color, thesis_figure)
 
 SPEC = FigureSpec(
@@ -44,8 +48,8 @@ SPEC = FigureSpec(
     caption=("Relative energy error of the optimized circuits at the critical field h = J against "
              "the depth p, for N = 4 to 12: (a) Hamiltonian variational ansatz, (b) hardware-"
              "efficient ansatz. The dashed line marks the target error 10^-3. (c) Smallest depth "
-             "reaching the target, against N, at h = 0.5 (ordered), 1.0 (critical) and 1.5 "
-             "(paramagnet); missing points did not reach the target within p <= N."),
+             "reaching the target against the field for N = 12; crosses at p = N + 1 mark fields "
+             "where no depth p <= N reaches it (the HVA in the ordered phase)."),
 )
 
 ANSATZE = ("hva", "hea")
@@ -60,6 +64,7 @@ def build(ctx):
                     for p in range(1, N + 1)} for N in sizes} for a in ANSATZE}
     ed = {N: ctx.load(f"ed_tfim_N{N}", "phase1", require=("E0", "h")) for N in sizes}
     pbc = ctx.load("vqe_hva_pbc_check", "phase2", require=("sizes", "fields", "rel_error", "fidelity"))
+    report = ctx.load_json("phase2_report_data.json", "phase2")
     h = np.asarray(data["hva"][sizes[0]][1]["h"])
     ih = field_index(h, th.vqe_field)
     ctx.param(sizes=sizes, depths="1..N", field=th.vqe_field, target_rel_error=tgt,
@@ -94,18 +99,40 @@ def build(ctx):
     ctx.check_max("periodic HVA at p = N/2 exact (Ho and Hsieh)", pbc["rel_error"], th.pbc_exact_tol,
                   detail=f"N = {[int(n) for n in pbc['sizes']]}, h = {[float(x) for x in pbc['fields']]}")
 
-    # -- required depth -------------------------------------------------------------
+    # -- required depth p*(h) ---------------------------------------------------------
     pstar = {}
+    for a in ANSATZE:
+        for N in sizes:
+            err = np.array([data[a][N][p]["rel_error"] for p in range(1, N + 1)])   # [p, h]
+            ok = err < tgt
+            pstar[a, N] = np.where(ok.any(axis=0), np.argmax(ok, axis=0) + 1.0, np.nan)
+    agree, compared = True, 0
+    for a in ANSATZE:
+        for N in sizes:
+            rep = report.get("sweeps", {}).get(f"{a}_N{N}", {}).get("required_depth_vs_field")
+            if rep is None or len(rep) != len(h):
+                agree = False
+                continue
+            r = np.array([np.nan if v is None else float(v) for v in rep])
+            agree &= bool(np.array_equal(np.isnan(r), np.isnan(pstar[a, N]))
+                          and np.allclose(r[~np.isnan(r)], pstar[a, N][~np.isnan(r)]))
+            compared += 1
+    ctx.check_true("p*(h) equals the Phase 2 report (required_depth_vs_field)",
+                   agree and compared == 2 * len(sizes), f"{compared} sweeps compared, every field")
     for a in ANSATZE:
         for hf in th.vqe_pstar_fields:
             k = field_index(h, hf)
-            row = []
-            for N in sizes:
-                ok = [p for p in range(1, N + 1) if data[a][N][p]["rel_error"][k] < tgt]
-                row.append(min(ok) if ok else np.nan)
-            pstar[a, hf] = row
             ctx.note(f"{a.upper()} p* at h = {hf}: " + ", ".join(
-                f"N={N}: {'-' if np.isnan(v) else int(v)}" for N, v in zip(sizes, row)))
+                f"N={N}: {'-' if np.isnan(pstar[a, N][k]) else int(pstar[a, N][k])}" for N in sizes))
+        win = np.abs(h - CFG.tfim.h_critical) <= 0.25 + 1e-9
+        parts = []
+        for N in sizes:
+            ps, hw = pstar[a, N][win], h[win]
+            if np.isnan(ps).any():
+                parts.append(f"N={N}: not reached at h = {', '.join(f'{x:g}' for x in hw[np.isnan(ps)])}")
+            else:
+                parts.append(f"N={N}: {int(ps.max())} (at h = {hw[int(np.argmax(ps))]:g})")
+        ctx.note(f"{a.upper()} hardest p* for 0.75 <= h <= 1.25: " + "; ".join(parts))
     for a in ANSATZE:
         ctx.note(f"{a.upper()} error at p = N, h = {th.vqe_field}: " + ", ".join(
             f"N={N}: {data[a][N][N]['rel_error'][ih]:.2e}" for N in sizes))
@@ -123,23 +150,26 @@ def build(ctx):
         ax.set_ylabel(r"$\epsilon = (E_{\mathrm{VQE}}-E_0)/|E_0|$")
         ax.set_ylim(FLOOR / 3, 1.0)
         ax.set_title(f"{name}, $h/J={th.vqe_field:g}$", loc="right")
-    axes[0].legend(loc="lower left", ncol=2)
-    styles = {0.5: ":", 1.0: "-", 1.5: "--"}
+    axes[0].legend(loc="lower right", ncol=1)
     ax = axes[2]
+    Nc = max(th.vqe_plot_sizes)
     for a, name in zip(ANSATZE, ("HVA", "HEA")):
-        for hf in th.vqe_pstar_fields:
-            ax.plot(sizes, pstar[a, hf], ANSATZ_MARKERS[name] + styles.get(hf, "-"),
-                    color=SERIES_COLORS[name], ms=3.5)
-    ax.plot(sizes, sizes, color=COLORS["grey"], lw=0.6)
-    handles = [ax.plot([], [], ANSATZ_MARKERS[n], color=SERIES_COLORS[n], ms=3.5, label=n)[0]
-               for n in ("HVA", "HEA")]
-    handles += [ax.plot([], [], styles.get(hf, "-"), color=COLORS["black"], lw=0.9,
-                        label=f"$h/J={hf:g}$")[0] for hf in th.vqe_pstar_fields]
-    handles += [ax.plot([], [], color=COLORS["grey"], lw=0.6, label="$p=N$")[0]]
-    ax.set_xlabel("$N$")
+        ps = pstar[a, Nc]
+        ax.plot(h, ps, ANSATZ_MARKERS[name] + ("-" if a == "hva" else "--"), color=SERIES_COLORS[name],
+                ms=2.5, lw=0.9, mfc="none" if a == "hea" else None, label=name)
+        miss = np.isnan(ps)
+        if miss.any():
+            ax.plot(h[miss], np.full(miss.sum(), Nc + 1.0), "x", color=SERIES_COLORS[name], ms=3)
+    ax.plot([], [], "x", color=COLORS["black"], ms=3, label=f"not reached ($p \\leq {Nc}$)")
+    ax.axhline(Nc, color=COLORS["grey"], lw=0.5, ls=":")
+    ax.set_xlabel(r"$h/J$")
     ax.set_ylabel(r"required depth $p^*$")
-    ax.set_xticks(sizes)
-    ax.legend(handles=handles, loc="upper left", ncol=2, handlelength=2.2, columnspacing=1.0)
+    ax.set_xlim(h.min(), h.max())
+    ax.set_ylim(0, Nc + 2.5)
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    mark_critical(ax)
+    ax.set_title(rf"$N={Nc}$, $\epsilon < 10^{{-3}}$", loc="right")
+    ax.legend(loc="lower left")
     panel_labels(axes)
     return fig
 

@@ -31,7 +31,8 @@ import numpy as np
 
 from config import CFG
 from experiments.thesis.figlib import FigureSpec, cc_fit, field_index, run_figure
-from utils.plotting import ANSATZ_MARKERS, panel_labels, reference_line, size_color, thesis_figure
+from utils.plotting import (ANSATZ_MARKERS, COLORS, panel_labels, reference_line, size_color,
+                            thesis_figure)
 
 SPEC = FigureSpec(
     number=7,
@@ -127,6 +128,7 @@ def build(ctx):
     reference_line(ax, 0.5, lw=0.8)
     ax.set_title("HVA, periodic", loc="right")
     for ax in axes:
+        ax.plot([], [], "--", color=COLORS["grey"], lw=0.7, label="ED, same $N$")
         ax.set_ylim(*YLIM)
         ax.set_xlabel("depth $p$")
         ax.set_ylabel(r"fitted $c$ at $h=J$")

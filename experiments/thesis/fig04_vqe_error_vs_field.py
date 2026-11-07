@@ -98,11 +98,11 @@ def build(ctx):
     for N in sizes:
         d = data["hea"][N][N]
         b = bound["hea", N, N]
-        sel = b > 1e-12
+        sel = (b > 1e-12) & (np.abs(np.asarray(d["parity"])) < 0.5)      # symmetry-broken states
         if sel.any():
             r = np.asarray(d["rel_error"])[sel] / b[sel]
             ctx.note(f"HEA N={N}, p=N: eps / parity bound min {r.min():.3f}, median {np.median(r):.3f} "
-                     f"over {sel.sum()} fields with resolvable bound")
+                     f"over the {sel.sum()} symmetry-broken states (|<P>| < 0.5)")
         ctx.note(f"HEA N={N}, p=N, h={h[0]:g}: <P> = {d['parity'][0]:.3f}, F = {d['fidelity'][0]:.3f}, "
                  f"F_GS = {d['fidelity_gs'][0]:.4f}")
 
@@ -124,7 +124,7 @@ def build(ctx):
         ax.set_xlim(h.min(), h.max())
     axes[0].legend(loc="lower left")
     axes[1].plot([], [], ":", color=COLORS["black"], lw=0.9, label="parity bound, $p=N$")
-    axes[1].legend(loc="lower left", handles=axes[1].get_legend_handles_labels()[0][-1:])
+    axes[1].legend(loc="upper left", handles=axes[1].get_legend_handles_labels()[0][-1:])
     ax = axes[2]
     for N in plot_sizes:
         ax.plot(h, data["hea"][N][N]["parity"], "-", color=size_color(N), label=f"$N={N}$, HEA")

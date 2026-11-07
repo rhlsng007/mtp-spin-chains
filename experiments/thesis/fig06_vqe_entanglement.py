@@ -54,7 +54,8 @@ SPEC = FigureSpec(
     caption=("Half-chain entanglement entropy of the optimized states for N = 12 against the field, "
              "at depth p = N/2 (dashed) and p = N (solid). (a) Hamiltonian variational ansatz with "
              "the exact even-parity ground state (black). (b) Hardware-efficient ansatz with the "
-             "exact even-parity (black solid) and symmetry-broken (black dotted) ground states. "
+             "exact even-parity (black solid) and symmetry-broken (black dotted, drawn where the "
+             "two parity sectors form a degenerate ground space) ground states. "
              "(c) Largest half-chain Renyi-2 entropy the circuits reach at depth p, with the rank "
              "bound min(p, N/2) ln 2 (dashed) and the largest ground-state entropy over all fields "
              "(dotted)."),
@@ -88,7 +89,8 @@ def build(ctx):
                            require=("S", "S2", "S_ref", "fidelity_gs", "audenaert",
                                     "rank_fidelity_bound", "depths", "h"))
                for N in sizes} for a, _ in ANSATZE}
-    ed = {N: ctx.load(f"ent_ed_N{N}", "phase3", require=("S_even", "S_broken", "h")) for N in sizes}
+    ed = {N: ctx.load(f"ent_ed_N{N}", "phase3", require=("S_even", "S_broken", "h", "ground_space"))
+          for N in sizes}
     ph1 = {N: ctx.load(f"ed_tfim_N{N}", "phase1", require=("S_half",)) for N in sizes}
     mx = {a: {N: ctx.load(f"maxent_{a}_N{N}", "phase3", require=("S2_max", "depths")) for N in sizes}
           for a, _ in ANSATZE}
@@ -183,8 +185,9 @@ def build(ctx):
         p = list(np.asarray(d["depths"], dtype=int))
         ax.plot(h, ed[Np]["S_even"][:, half], color=SERIES_COLORS["ED"], lw=0.9, label="ED, even parity")
         if a == "hea":
-            ax.plot(h, ed[Np]["S_broken"][:, half], ":", color=SERIES_COLORS["ED"], lw=0.9,
-                    label="ED, symmetry broken")
+            twofold = np.asarray(ed[Np]["ground_space"]).all(axis=1)    # both sectors degenerate
+            ax.plot(h[twofold], ed[Np]["S_broken"][twofold, half], ":", color=SERIES_COLORS["ED"],
+                    lw=0.9, label="ED, symmetry broken")
         for q, ls in ((Np // 2, "--"), (Np, "-")):
             ax.plot(h, d["S"][p.index(q), :, half], ls, color=SERIES_COLORS[name], label=f"{name}, $p={q}$")
         reference_line(ax, LN2, color=COLORS["grey"], ls=":")
@@ -193,7 +196,7 @@ def build(ctx):
         ax.set_xlabel(r"$h/J$")
         ax.set_ylabel(r"$S(N/2)$")
         ax.set_title(f"{name}, $N={Np}$", loc="right")
-        ax.legend(loc="lower left")
+        ax.legend(loc="lower left" if a == "hva" else "upper right")
     ax = axes[2]
     pp = np.arange(1, Np + 1)
     ax.plot(pp, np.minimum(pp, Np // 2) * LN2, "--", color=COLORS["black"], lw=0.8,
@@ -208,7 +211,7 @@ def build(ctx):
     ax.set_xlabel("depth $p$")
     ax.set_ylabel(r"$S_2(N/2)$, maximized")
     ax.set_title(f"$N={Np}$", loc="right")
-    ax.legend(loc="upper left")
+    ax.legend(loc="center right")
     panel_labels(axes)
     return fig
 
