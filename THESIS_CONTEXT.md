@@ -722,7 +722,7 @@ $$
 
 ## 15. Phase 8: completed
 
-**Status:** done; merged into `main` at 7e2004f, tag `phase8-complete`. Last commits before the merge: the Results notes (1288dc2) and this context update (64e3565). `pytest -q`: 404 tests pass (31 in `test_phase8.py`, 9 in `test_phase8_notes.py`). `python experiments\make_thesis_figures.py`: 16 thesis figures, 146 checks passed, 0 failed, about 8 s; a rerun leaves the committed PDFs and the manifest byte-identical. Report: the Claude Doc "Phase 8: Results Consolidation".
+**Status:** done; merged into `main` at 7e2004f, tag `phase8-complete`. Last commits before the merge: the Results notes (1288dc2) and this context update (64e3565). `pytest -q`: 404 tests pass (31 in `test_phase8.py`, 9 in `test_phase8_notes.py`). `python experiments\make_thesis_figures.py`: 16 thesis figures, 146 checks passed, 0 failed, about 8 s; a rerun leaves the committed PDFs and the manifest byte-identical. Report: the Claude Doc "Phase 8: Results Consolidation" (https://claude.ai/artifact/LbceFHuVKHUx2m2pa7CQrH).
 
 **How to run (from the project root, after Phases 1 to 7):**
 
@@ -767,4 +767,4 @@ $$
 - The thesis uses only `figures/thesis/` (16 figures); captions start from `MANIFEST.md`, the Results chapter from `notes/`. Phase figures in `figures/phaseN/` remain working figures.
 - State the two error-budget definitions once in the text where Figure 16 is introduced.
 - Present the finite-size drift of h_c^ML below h_c as a hypothesis (fixed-threshold classifier; free-fermion extrapolation 0.955).
-- Still open before submission: correct the N = 4 sentence in the Phase 7 report; check the references of the Phase 2 to 7 reports; the literature check of the half-final-layer folding bias. T7.5 (QCNN, cluster-Ising) stays optional future work.
+- Still open before submission: write the Phase 6 report (Section 13 says "to be written"); correct the N = 4 sentence in the Phase 7 report; check the references of the Phase 2 to 7 reports; the literature check of the half-final-layer folding bias. T7.5 (QCNN, cluster-Ising) stays optional future work.
