@@ -1,0 +1,3 @@
+
+# Phase 8: the figure runner writes the manifest with LF
+figures/thesis/MANIFEST.md text eol=lf
