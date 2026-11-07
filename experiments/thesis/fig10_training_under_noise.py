@@ -8,7 +8,8 @@ basis) against evaluating the noiseless optimum under the same noise
 Panels (N = CFG.thesis.noise_size, p = N/2, h = CFG.thesis.noise_field)
   (a) depolarizing: relative energy error of experiment A (noiseless optimum
       under noise, solid), of the warm start trained under noise (dotted), and
-      of the best of three cold starts (dashed); the grey line is the product-
+      the median of three cold starts (dashed, as in the Phase 4 report); the grey
+      line is the product-
       state bound eps_prod (below it the energy certifies entanglement)
   (b) amplitude damping: the same; the cold-trained HEA overtakes experiment A
   (c) amplitude damping: logarithmic negativity of the same states; the low
@@ -25,10 +26,10 @@ Validation (all 72 training files)
   * Strength 0 is shared by the three channels (one noiseless run).
   * The experiment-A energies stored with the training runs equal the Phase 4
     experiment-A files at the same N, p and field.
-  * Warm starts reproduce experiment A: |median(eps_warm - eps_A)| <= 2e-4 for
-    every problem (Phase 4 result).
-  * eps_A and the best cold eps at the strongest noise reproduce the Phase 4
-    report (N = 8, h = 1, every channel).
+  * Warm starts reproduce experiment A: median(eps_warm - eps_A) equals the
+    Phase 4 report for every problem (all at most 2e-4).
+  * eps_A and the median cold eps, purity and E_N at the strongest noise
+    reproduce the Phase 4 report (N = 8, h = 1, every channel).
 """
 
 import sys
@@ -51,7 +52,7 @@ SPEC = FigureSpec(
     title="Training under noise: lower energy by abandoning entanglement",
     caption=("Noisy VQE at N = 8, p = 4, h = J. Solid: noiseless optimum evaluated under noise "
              "(experiment A); dotted: warm start optimized under noise by SPSA with 10,000 shots per "
-             "basis; dashed: best of three cold starts. (a) Depolarizing and (b) amplitude-damping "
+             "basis; dashed: median of three cold starts. (a) Depolarizing and (b) amplitude-damping "
              "noise; the grey line is the product-state bound eps_prod, below which the energy "
              "certifies entanglement. (c) Logarithmic negativity of the amplitude-damping states: "
              "the cold-trained HEA reaches a lower energy than experiment A by retreating to a "
@@ -59,7 +60,6 @@ SPEC = FigureSpec(
 )
 
 ANSATZE = (("hva", "HVA"), ("hea", "HEA"))
-WARM_TOL = 2e-4
 
 
 def build(ctx):
@@ -81,7 +81,7 @@ def build(ctx):
               train_shots=int(np.asarray(first.get("train_shots", CFG.noise.train_shots))))
 
     # -- validation ------------------------------------------------------------
-    var, shared, evA, warm = [], [], [], []
+    var, shared, evA, warm, warm_rep = [], [], [], [], []
     for (a, N, f, st), d in train.items():
         var.append(np.min((np.asarray(d["energy"]) - float(d["E0"])) / abs(float(d["E0"]))))
         r0 = np.asarray(d["rel_error"])[:, 0]
@@ -90,45 +90,49 @@ def build(ctx):
         evA.append(np.max(np.abs(np.asarray(d["evalA_rel_error"]) -
                                  np.asarray(e["rel_error"])[:, :, field_index(e["h"], f)])))
         if st == 0:
-            warm.append(abs(float(np.median(np.asarray(d["rel_error"]) - d["evalA_rel_error"]))))
+            warm.append(float(np.median(np.asarray(d["rel_error"]) - d["evalA_rel_error"])))
+            warm_rep.append(report.get("training", {}).get(f"{a}_N{N}_h{float(f)}", {})
+                            .get("warm_minus_A_median"))
     ctx.check_min("variational principle: Tr(rho H) >= E0 for every trained state", var,
                   -th.variational_tol)
     ctx.check_max("strength 0 shared by the three channels", shared, 1e-15)
     ctx.check_max("stored experiment-A errors equal the Phase 4 experiment-A files", evA, th.identity_tol)
-    ctx.check_max(f"warm starts reproduce experiment A: |median(eps_warm - eps_A)| <= {WARM_TOL:g}",
-                  warm, WARM_TOL, detail=f"{len(warm)} problems")
+    ctx.check_rounded("warm starts reproduce experiment A: median(eps_warm - eps_A) equals the Phase 4 "
+                      "report", warm, warm_rep,
+                      detail=f"{len(warm)} problems, largest |median| {max(abs(w) for w in warm):.2e}")
 
-    best = {}
+    cold = {}                                   # median over the cold starts (Phase 4 convention)
     for a, _ in ANSATZE:
-        cold = np.stack([np.asarray(train[a, Np, hf, st]["rel_error"]) for st in (1, 2, 3)])  # [start, ch, s]
-        k = np.argmin(cold, axis=0)
-        best[a] = {"rel_error": np.take_along_axis(cold, k[None], 0)[0],
-                   "E_N": np.take_along_axis(np.stack([np.asarray(train[a, Np, hf, st]["E_N"])
-                                                       for st in (1, 2, 3)]), k[None], 0)[0],
-                   "purity": np.take_along_axis(np.stack([np.asarray(train[a, Np, hf, st]["purity"])
-                                                          for st in (1, 2, 3)]), k[None], 0)[0]}
+        cold[a] = {k: np.median(np.stack([np.asarray(train[a, Np, hf, st][k]) for st in (1, 2, 3)]), axis=0)
+                   for k in ("rel_error", "E_N", "purity")}
+        cold[a]["best"] = np.min(np.stack([np.asarray(train[a, Np, hf, st]["rel_error"]) for st in (1, 2, 3)]),
+                                 axis=0)
     mine, theirs = [], []
     for a, _ in ANSATZE:
         r = report.get("training", {}).get(f"{a}_N{Np}_h{float(hf)}", {})
         for c, ch in enumerate(channels):
             if ch in r:
-                mine += [float(train[a, Np, hf, 0]["evalA_rel_error"][c, -1]), float(best[a]["rel_error"][c, -1])]
-                theirs += [r[ch]["eps_A_pmax"], r[ch]["eps_cold_pmax"]]
+                mine += [float(train[a, Np, hf, 0]["evalA_rel_error"][c, -1]),
+                         float(cold[a]["rel_error"][c, -1]), float(cold[a]["purity"][c, -1]),
+                         float(cold[a]["E_N"][c, -1])]
+                theirs += [r[ch]["eps_A_pmax"], r[ch]["eps_cold_pmax"], r[ch].get("purity_cold_pmax"),
+                           r[ch].get("E_N_cold_pmax")]
     if not mine:
         ctx.check_true("Phase 4 report has training entries for the plotted problem", False)
-    ctx.check_rounded(f"eps_A and best cold eps at p = {s[-1]:g} reproduce the Phase 4 report "
-                      f"(N = {Np}, h = {hf:g})", mine, theirs)
+    ctx.check_rounded(f"eps_A and median cold eps, purity, E_N at p = {s[-1]:g} reproduce the Phase 4 "
+                      f"report (N = {Np}, h = {hf:g})", mine, theirs)
 
     wit = report.get("energy_witness", {})
     eps_prod = {a: wit.get(f"{a}_h{float(hf)}", {}).get("eps_prod") for a, _ in ANSATZE}
     for a, name in ANSATZE:
         A = np.asarray(train[a, Np, hf, 0]["evalA_rel_error"])
         for c, ch in enumerate(channels):
-            cross = np.flatnonzero(best[a]["rel_error"][c] < A[c])
+            cross = np.flatnonzero(cold[a]["rel_error"][c] < A[c])
             cross = [float(s[i]) for i in cross if s[i] > 0]
-            ctx.note(f"{name} N={Np} h={hf:g} {ch}: eps_A {A[c, -1]:.3f}, best cold {best[a]['rel_error'][c, -1]:.3f} "
-                     f"(purity {best[a]['purity'][c, -1]:.2f}, E_N {best[a]['E_N'][c, -1]:.3f}) at p = {s[-1]:g}; "
-                     f"cold below A from p = {cross[0] if cross else 'never'}")
+            ctx.note(f"{name} N={Np} h={hf:g} {ch}: eps_A {A[c, -1]:.4f}, cold median "
+                     f"{cold[a]['rel_error'][c, -1]:.4f} (best {cold[a]['best'][c, -1]:.4f}; purity "
+                     f"{cold[a]['purity'][c, -1]:.3f}, E_N {cold[a]['E_N'][c, -1]:.4f}) at p = {s[-1]:g}; "
+                     f"cold median below A from p = {cross[0] if cross else 'never'}")
     ctx.note(f"product-state bound eps_prod at h = {hf:g}: {eps_prod}")
 
     # -- figure --------------------------------------------------------------------
@@ -148,7 +152,7 @@ def build(ctx):
                 W = np.asarray(train[a, Np, hf, 0]["E_N"])[c]
             ax.plot(x, A, m + "-", color=col, ms=2.5, lw=1.0, label=f"{name}, A")
             ax.plot(x, W, ":", color=col, lw=1.0)
-            ax.plot(x, best[a][key][c], m + "--", color=col, ms=2.5, lw=1.0, mfc="none")
+            ax.plot(x, cold[a][key][c], m + "--", color=col, ms=2.5, lw=1.0, mfc="none")
         ax.set_xscale("log")
         ax.set_xlabel("noise strength $p$")
         if key == "rel_error":
@@ -165,7 +169,7 @@ def build(ctx):
         label_zero_strength(ax, x0)
     handles = [axes[2].plot([], [], "-", color=COLORS["black"], label="A: noiseless optimum")[0],
                axes[2].plot([], [], ":", color=COLORS["black"], label="warm start, trained")[0],
-               axes[2].plot([], [], "--", color=COLORS["black"], label="best cold start, trained")[0],
+               axes[2].plot([], [], "--", color=COLORS["black"], label="cold starts (median), trained")[0],
                axes[2].plot([], [], "--", color=COLORS["grey"], lw=0.7,
                             label=r"$\epsilon_{\mathrm{prod}}$ in (a), (b)")[0]]
     leg = axes[2].legend(handles=handles, loc="lower left")
