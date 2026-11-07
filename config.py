@@ -359,6 +359,31 @@ class MLConfig:
 
 
 # ---------------------------------------------------------------------------
+# Thesis figures and results consolidation (Phase 8)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class ThesisConfig:
+    # Output: figures/<figure_subdir>/figNN_<slug>.pdf/.png; sidecars and
+    # inventory in results/<results_subdir>/
+    figure_subdir: str = "thesis"
+    results_subdir: str = "phase8"
+    formats: tuple = ("pdf", "png")
+    png_dpi: int = 300
+    strict: bool = True                  # a failed check gives exit code 1
+    # Figure 1: exact-diagonalization baseline of the TFIM (Phase 1 data)
+    ed_sizes: tuple = (4, 6, 8, 10, 12, 14)
+    binder_sizes: tuple = (6, 8, 10, 12, 14)   # consecutive pairs give crossings
+    binder_window: tuple = (0.5, 1.5)    # crossings searched only in this field range
+    ff_tol: float = 1e-9                 # ED E0 and E1 - E0 against free fermions
+    gap_fit_sizes: tuple = (8, 10, 12, 14)   # N*gap(h_c) = a + b/N + c/N^2 -> a = pi
+    gap_fit_rtol: float = 1e-4
+    cat_field: float = 0.1               # ordered-phase plateau S(N/2) = ln 2
+    cat_entropy_tol: float = 1e-3      # largest deviation is N = 4 (2e-4); N >= 6: 6e-6
+    area_law_field: float = 2.0          # paramagnet: S(N/2) saturates with N
+    area_law_tol: float = 1e-4
+
+
+# ---------------------------------------------------------------------------
 # Reproducibility
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -388,6 +413,7 @@ class Config:
     mitigation: MitigationConfig = field(default_factory=MitigationConfig)
     ml: MLConfig = field(default_factory=MLConfig)
     seeds: SeedConfig = field(default_factory=SeedConfig)
+    thesis: ThesisConfig = field(default_factory=ThesisConfig)
 
     def to_dict(self) -> dict:
         """Plain dictionary, stored alongside every saved result."""
