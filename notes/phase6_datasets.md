@@ -1,7 +1,8 @@
 # Phase 6: machine-learning datasets
 
 **Status.** Tag `phase6-complete` (merge 53189d3); datasets at commit 27b3527.
-350 tests at the time (27 for Phase 6); `phase6_plots.py` 16 checks. 38 datasets
+350 tests at the time (27 for Phase 6); `phase6_plots.py` 16 checks. Report: "Phase 6: Machine-Learning Datasets for Phase Classification of the Transverse-Field Ising Chain"
+(Claude Doc). 38 datasets
 in 170 s (12 workers), 78 files in `results/phase6/`.
 
 ## Parameters
@@ -23,7 +24,7 @@ in 170 s (12 workers), 78 files in `results/phase6/`.
 
 ## Key observations
 
-- **Validation.** ED features equal free-fermion correlators (Pfaffians) to 1e-8;
+- **Validation.** ED features equal free-fermion correlators (Pfaffians) to 1.4e-14;
   energies rebuilt from the features equal ED and Phase 2; the ZZ matrix is
   positive semidefinite; shadow means are unbiased and their spread matches the
   analytic variance,
