@@ -303,3 +303,37 @@ def test_first_crossing_log_interpolation():
     y = np.array([-1.0, -1.0, -0.5, 0.5])                 # crosses half-way in log p
     assert first_crossing(s, y) == pytest.approx(10 ** -2.5, rel=1e-12)
     assert np.isnan(first_crossing(s, -np.ones(4)))
+
+
+# ---------------------------------------------------------------------------
+# Figures 13 to 16: Phase 7 statistics, tables, drift onset
+# ---------------------------------------------------------------------------
+from experiments.thesis.figlib import drift_onset, summarize_hc, table_value  # noqa: E402
+
+
+def test_summarize_hc_matches_phase7_definition():
+    hc = np.array([0.80, 0.82, np.nan, 0.81, 0.83])
+    rep = np.array([[0.80, 0.81, 0.79, 0.80]] * 5)
+    s = summarize_hc(hc, rep)
+    assert s["mean"] == pytest.approx(np.nanmean(hc)) and s["n_valid"] == 4
+    assert s["seed_std"] == pytest.approx(np.nanstd(hc, ddof=1))
+    se = np.std(rep[0], ddof=1) / 2.0
+    assert s["shot_se"] == pytest.approx(se)
+    assert s["total"] == pytest.approx(np.hypot(np.nanstd(hc, ddof=1), se))
+    assert np.isnan(summarize_hc(np.full(5, np.nan))["mean"])
+
+
+def test_table_value_formats_like_phase7():
+    rows = [{"mode": "noisy", "strength": "0.0004642", "N": "8", "hc_mean": "0.8123"},
+            {"mode": "noisy", "strength": "0.001", "N": "8", "hc_mean": "nan"}]
+    assert table_value(rows, "hc_mean", mode="noisy", strength=4.6415888e-4, N=8) == pytest.approx(0.8123)
+    assert np.isnan(table_value(rows, "hc_mean", mode="noisy", strength=1e-3, N=8))
+    assert np.isnan(table_value(rows, "hc_mean", mode="mixed", strength=1e-3, N=8))
+
+
+def test_drift_onset_phase7_rule():
+    s = np.array([0.0, 1e-4, 1e-3, 1e-2])
+    mean = np.array([0.85, 0.849, 0.80, np.nan])
+    tot = np.full(4, 0.01)
+    assert drift_onset(mean, tot, s) == 2                          # 0.05 > 2 sqrt(2) 0.01
+    assert drift_onset(np.array([0.85, 0.85, 0.85, np.nan]), tot, s) == -1   # no crossing is not drift

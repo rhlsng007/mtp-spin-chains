@@ -412,6 +412,13 @@ class ThesisConfig:
     hashing_rtol: float = 0.01           # hashing-bound strength against the Phase 4 report
     # Figures 11 and 12: mitigation (Phase 5; sizes and field from CFG.mitigation)
     report_rtol: float = 1e-3            # medians recomputed from the same data
+    # Figures 13 to 16: machine-learning classification (Phases 6 and 7; sizes from CFG.ml)
+    ml_main_kind: str = "shadow"         # noise figures: shadow features,
+    ml_main_features: str = "corr"       # correlator feature set,
+    ml_main_classifier: str = "logistic" # logistic regression (Phase 7 convention)
+    drift_sigmas: float = 2.0            # drift onset: shift > 2 combined sigma (Phase 7)
+    table_tol: float = 5e-5              # Phase 7 CSV tables print 4 decimals
+    zne_feature_ratio_max: float = 0.1   # ZNE leaves < 10 % of the exact feature error
 
 
 # ---------------------------------------------------------------------------

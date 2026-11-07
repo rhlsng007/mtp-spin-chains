@@ -172,6 +172,17 @@ class Context:
         })
         return arrays
 
+    def load_table(self, name: str, subdir: str) -> list:
+        """Rows (dicts of strings) of a CSV result table, recorded as an input."""
+        import csv
+        path = self.results_dir / subdir / name
+        if not path.exists():
+            raise FileNotFoundError(f"{self.spec.name}: missing input {subdir}/{name}")
+        self.inputs.append({"file": f"{subdir}/{name}", "commit": "", "timestamp": "",
+                            "sha256": file_digest(path)})
+        with open(path, newline="", encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+
     def load_json(self, name: str, subdir: str) -> dict:
         """A plain JSON result (e.g. phaseN_report_data.json), recorded as an input."""
         path = self.results_dir / subdir / name
@@ -401,3 +412,61 @@ def loglog_slope(x, y) -> float:
     if np.any(x <= 0) or np.any(y <= 0):
         return float("nan")
     return float((np.log(y[1]) - np.log(y[0])) / (np.log(x[1]) - np.log(x[0])))
+
+
+def summarize_hc(hc, hc_rep=None) -> dict:
+    """
+    Phase 7 statistics of h_c^ML (same estimator as ml.classifiers.summarize_hc):
+    mean and spread over seeds (last axis, NaN = no crossing ignored), shot
+    standard error from the test repetitions, total = quadrature sum.
+    """
+    import warnings
+    hc = np.asarray(hc, dtype=float)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        mean = np.nanmean(hc, axis=-1)
+        seed_std = np.nanstd(hc, axis=-1, ddof=1) if hc.shape[-1] > 1 else np.zeros_like(mean)
+        out = {"mean": mean, "seed_std": seed_std, "n_valid": np.sum(np.isfinite(hc), axis=-1)}
+        if hc_rep is not None:
+            hr = np.asarray(hc_rep, dtype=float)
+            n = np.sum(np.isfinite(hr), axis=-1)
+            sd = np.nanstd(hr, axis=-1, ddof=1)
+            se = np.where(n > 1, sd / np.sqrt(np.maximum(n, 1)), np.nan)
+            out["shot_se"] = np.nanmean(se, axis=-1)
+            out["total"] = np.sqrt(np.nan_to_num(seed_std) ** 2 + np.nan_to_num(out["shot_se"]) ** 2)
+    return out
+
+
+def table_value(rows: list, column: str, **match) -> float:
+    """
+    One numeric cell of a Phase 7 CSV table; numeric match values are compared
+    after formatting as the table does (strength and lambda with 4 significant
+    figures). NaN if the row is missing or the cell reads "nan".
+    """
+    def same(cell: str, v) -> bool:
+        if isinstance(v, (float, np.floating)):
+            try:
+                return np.isclose(float(cell), float(f"{float(v):.4g}"), rtol=1e-9, atol=0.0)
+            except ValueError:
+                return False
+        return cell == str(v)
+    for r in rows:
+        if all(same(r.get(k, ""), v) for k, v in match.items()):
+            try:
+                return float(r[column])
+            except (ValueError, KeyError):
+                return float("nan")
+    return float("nan")
+
+
+def drift_onset(mean, total, strengths, n_sigma: float = 2.0) -> int:
+    """
+    Index of the first strength > 0 where h_c^ML moves by more than n_sigma
+    combined standard deviations from its p = 0 value (Phase 7 definition; a
+    missing crossing does not count as drift). -1 if none.
+    """
+    mean, total = np.asarray(mean, dtype=float), np.asarray(total, dtype=float)
+    with np.errstate(invalid="ignore"):
+        drift = np.abs(mean - mean[0]) > n_sigma * np.sqrt(total ** 2 + total[0] ** 2)
+    hit = np.flatnonzero(drift & (np.asarray(strengths) > 0))
+    return int(hit[0]) if hit.size else -1
