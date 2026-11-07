@@ -199,7 +199,8 @@ def build(ctx):
     hc_ = [ax.plot([], [], "s", color=CHANNEL_COLORS[ch], ms=4.5, label=lab)[0]
            for ch, lab in (("depolarizing", "depolarizing"), ("amplitude_damping", "amplitude damping"),
                            ("dephasing", "dephasing"))]
-    ax.legend(handles=hc_, loc="upper left", title="Phase 4 channel")
+    ax.legend(handles=hc_, loc="lower left", title="Phase 4 channel", frameon=True, framealpha=1.0,
+              edgecolor="none")
     return fig
 
 

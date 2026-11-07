@@ -156,7 +156,7 @@ def build(ctx):
     ax.set_xlim(h.min(), h.max())
     ax.set_xlabel(r"$h/J$")
     ax.set_ylabel(r"$P(h)$, logistic regression")
-    ax.legend(loc="lower right", ncol=2, columnspacing=0.8)
+    ax.legend(loc="center right", ncol=2, columnspacing=0.8)
 
     ax = axes[1]
     inv = lambda n: 1.0 / np.asarray(n, dtype=float)  # noqa: E731
@@ -174,7 +174,7 @@ def build(ctx):
     ax.set_ylim(lo - 0.02, 1.06)
     ax.set_xlabel(r"$1/N$")
     ax.set_ylabel(r"$h_c^{\mathrm{ML}}/J$")
-    ax.legend(loc="upper right")
+    ax.legend(loc="center right")
 
     ax = axes[2]
     ax.plot(vsizes, [stats[N]["mean"][sh, fc, lr] for N in vsizes], "-", color=SERIES_COLORS["ED"], lw=0.9,
@@ -189,7 +189,7 @@ def build(ctx):
     ax.set_xticks(vsizes)
     ax.set_xlabel("$N$")
     ax.set_ylabel(r"$h_c^{\mathrm{ML}}/J$, trained on ED")
-    ax.legend(loc="lower right", ncol=1)
+    ax.legend(loc="center", ncol=2, columnspacing=0.8, handlelength=1.6)
     panel_labels(axes)
     return fig
 

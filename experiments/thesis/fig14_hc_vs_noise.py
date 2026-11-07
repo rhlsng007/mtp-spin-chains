@@ -189,7 +189,7 @@ def build(ctx):
                 ax.plot(x[miss] * off, np.full(miss.sum(), 1.04), "x", color=MODE_COLORS[m], ms=3.5, clip_on=False)
         ax.set_xscale("log")
         finite = np.concatenate([s["mean"][im, :, kk, fc, lr] for im in M.values()])
-        ax.set_ylim(max(0.3, np.nanmin(finite) - 0.04), 1.06)
+        ax.set_ylim(max(0.0, np.nanmin(finite) - 0.04), 1.06)
         reference_line(ax, CFG.tfim.h_critical, lw=0.6, ls=":")
         ax.set_xlabel(r"error budget $\lambda$")
         ax.set_ylabel(r"$h_c^{\mathrm{ML}}/J$")
