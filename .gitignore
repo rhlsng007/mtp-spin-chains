@@ -22,3 +22,6 @@ figures/**/*.png
 .DS_Store
 .vscode/
 .idea/
+
+# Phase 8: generated inventory (rerun scripts\phase8_inventory.py)
+results/phase8/inventory.md
